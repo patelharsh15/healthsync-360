@@ -1,24 +1,61 @@
 import { DashboardCard } from "@/components/DashboardCard";
 import { HealthMetric } from "@/components/HealthMetric";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 
+interface Goal {
+  id: string;
+  goal_type: string;
+  target_value: number;
+  current_value: number;
+  unit: string;
+}
+
 const Progress = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiInsights, setAiInsights] = useState<string | null>(null);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+
+  useEffect(() => {
+    fetchGoals();
+  }, []);
+
+  const fetchGoals = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user.id) return;
+
+      const { data: userGoals, error } = await supabase
+        .from('user_goals')
+        .select('*')
+        .eq('user_id', session.user.id);
+
+      if (error) throw error;
+      setGoals(userGoals || []);
+    } catch (error) {
+      console.error('Error fetching goals:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch your goals. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const analyzeProgress = async () => {
     setIsAnalyzing(true);
     try {
-      const metrics = {
-        steps: { value: 6500, target: 10000 },
-        water: { value: 1.5, target: 2.5 },
-        sleep: { value: 6.5, target: 8 }
-      };
+      const metrics = goals.reduce((acc, goal) => ({
+        ...acc,
+        [goal.goal_type]: { value: goal.current_value, target: goal.target_value }
+      }), {});
 
       const { data, error } = await supabase.functions.invoke('groq-chat', {
         body: {
@@ -30,9 +67,9 @@ const Progress = () => {
             {
               role: 'user',
               content: `Analyze my current progress metrics and provide specific recommendations:
-                Steps: ${metrics.steps.value}/${metrics.steps.target}
-                Water Intake: ${metrics.water.value}/${metrics.water.target}L
-                Sleep: ${metrics.sleep.value}/${metrics.sleep.target} hours`
+                ${Object.entries(metrics).map(([type, data]) => 
+                  `${type}: ${(data as any).value}/${(data as any).target}`
+                ).join('\n')}`
             }
           ]
         }
@@ -57,6 +94,14 @@ const Progress = () => {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <h2 className="text-2xl font-bold text-gray-900">Progress Tracking</h2>
@@ -64,38 +109,33 @@ const Progress = () => {
       <div className="grid gap-6 md:grid-cols-2">
         <DashboardCard title="Today's Progress" className="animate-fadeIn">
           <div className="space-y-6">
-            <HealthMetric
-              label="Steps"
-              value={6500}
-              target={10000}
-              unit="steps"
-            />
-            <HealthMetric
-              label="Water"
-              value={1.5}
-              target={2.5}
-              unit="L"
-            />
-            <HealthMetric
-              label="Sleep"
-              value={6.5}
-              target={8}
-              unit="hours"
-            />
-            <Button
-              onClick={analyzeProgress}
-              disabled={isAnalyzing}
-              className="w-full"
-            >
-              {isAnalyzing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Analyzing...
-                </>
-              ) : (
-                "Analyze Progress"
-              )}
-            </Button>
+            {goals.map((goal) => (
+              <HealthMetric
+                key={goal.id}
+                label={goal.goal_type.charAt(0).toUpperCase() + goal.goal_type.slice(1)}
+                value={goal.current_value}
+                target={goal.target_value}
+                unit={goal.unit}
+                goalId={goal.id}
+                onUpdate={fetchGoals}
+              />
+            ))}
+            {goals.length > 0 && (
+              <Button
+                onClick={analyzeProgress}
+                disabled={isAnalyzing}
+                className="w-full"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  "Analyze Progress"
+                )}
+              </Button>
+            )}
           </div>
         </DashboardCard>
 

@@ -20,7 +20,7 @@ export function HealthMetric({ label, value, target, unit, goalId, onUpdate }: H
   const [inputValue, setInputValue] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
-  const progress = (value / target) * 100;
+  const progress = Math.min((value / target) * 100, 100);
 
   const handleAddProgress = async () => {
     if (!goalId || !inputValue) return;
@@ -64,7 +64,7 @@ export function HealthMetric({ label, value, target, unit, goalId, onUpdate }: H
       <div className="flex justify-between text-sm font-medium">
         <span>{label}</span>
         <span>
-          {value} / {target} {unit}
+          {value.toLocaleString()} / {target.toLocaleString()} {unit}
         </span>
       </div>
       <Progress value={progress} className="h-2" />

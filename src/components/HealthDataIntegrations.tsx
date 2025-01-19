@@ -29,11 +29,7 @@ const platforms: Record<Platform, PlatformConfig> = {
   }
 };
 
-interface HealthDataIntegrationsProps {
-  className?: string;
-}
-
-export function HealthDataIntegrations({ className }: HealthDataIntegrationsProps) {
+export function HealthDataIntegrations() {
   const { toast } = useToast();
 
   const handleConnect = (platform: Platform) => {
@@ -44,7 +40,7 @@ export function HealthDataIntegrations({ className }: HealthDataIntegrationsProp
   };
 
   return (
-    <DashboardCard title="Health Data Integrations" className={className}>
+    <DashboardCard title="Health Data Integrations">
       <div className="grid gap-4 md:grid-cols-2">
         {Object.entries(platforms).map(([key, platform]) => {
           const Icon = platform.icon;

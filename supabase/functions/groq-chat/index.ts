@@ -22,19 +22,33 @@ serve(async (req) => {
       throw new Error('GROQ_API_KEY is not configured')
     }
 
-    // Format messages for Groq API
-    const formattedMessages = messages.map((msg: any) => ({
-      role: msg.role,
-      content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
-    }))
-
-    // If there's an image, add it to the system message context
+    let formattedMessages;
+    
     if (image) {
-      const imageContext = `[Analysis context: The user has provided an image for analysis]`
-      formattedMessages[0].content = `${formattedMessages[0].content} ${imageContext}`
+      // Format message specifically for image analysis
+      formattedMessages = [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Analyze this meal image and provide detailed nutritional insights." },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:image/jpeg;base64,${image}`,
+              },
+            },
+          ],
+        },
+      ];
+    } else {
+      // Handle regular text messages
+      formattedMessages = messages.map((msg: any) => ({
+        role: msg.role,
+        content: msg.content
+      }));
     }
 
-    console.log('Sending formatted messages to Groq:', formattedMessages)
+    console.log('Sending formatted messages to Groq:', JSON.stringify(formattedMessages, null, 2))
 
     const response = await fetch(GROQ_API_URL, {
       method: 'POST',
@@ -43,7 +57,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'mixtral-8x7b-32768',
+        model: image ? "llama-3.2-11b-vision-preview" : "mixtral-8x7b-32768",
         messages: formattedMessages,
         temperature: 0.7,
         max_tokens: 1024,

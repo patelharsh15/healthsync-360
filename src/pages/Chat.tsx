@@ -1,10 +1,14 @@
 import { HealthChat } from "@/components/HealthChat";
+import { HistoryList } from "@/components/HistoryList";
 
 const Chat = () => {
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       <h2 className="text-2xl font-bold text-gray-900">Health Assistant</h2>
-      <HealthChat />
+      <div className="grid gap-6 md:grid-cols-2">
+        <HealthChat />
+        <HistoryList />
+      </div>
     </div>
   );
 }

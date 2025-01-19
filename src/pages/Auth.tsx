@@ -1,29 +1,53 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Auth as SupabaseAuth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { GoalSettingForm } from "@/components/GoalSettingForm";
 
 const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [showGoalForm, setShowGoalForm] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === "SIGNED_IN") {
-          navigate("/");
-          toast({
-            title: "Welcome!",
-            description: "You have successfully signed in.",
-          });
+          if (session) {
+            const { data: goals } = await supabase
+              .from('user_goals')
+              .select('id')
+              .eq('user_id', session.user.id)
+              .limit(1);
+
+            if (!goals?.length) {
+              setUserId(session.user.id);
+              setShowGoalForm(true);
+            } else {
+              navigate("/");
+              toast({
+                title: "Welcome back!",
+                description: "You have successfully signed in.",
+              });
+            }
+          }
         }
       }
     );
 
     return () => subscription.unsubscribe();
   }, [navigate, toast]);
+
+  if (showGoalForm && userId) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+        <GoalSettingForm userId={userId} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">

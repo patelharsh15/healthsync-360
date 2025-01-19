@@ -123,6 +123,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_goals: {
+        Row: {
+          created_at: string
+          current_value: number | null
+          goal_type: Database["public"]["Enums"]["goal_type"]
+          id: string
+          target_value: number
+          unit: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_value?: number | null
+          goal_type: Database["public"]["Enums"]["goal_type"]
+          id?: string
+          target_value: number
+          unit: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_value?: number | null
+          goal_type?: Database["public"]["Enums"]["goal_type"]
+          id?: string
+          target_value?: number
+          unit?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       voice_journal: {
         Row: {
           analysis: string | null
@@ -158,7 +188,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      goal_type: "steps" | "water" | "sleep" | "weight" | "exercise"
     }
     CompositeTypes: {
       [_ in never]: never

@@ -4,8 +4,37 @@ import { HealthGoal } from "@/components/HealthGoal";
 import { HealthDataIntegrations } from "@/components/HealthDataIntegrations";
 import { Link } from "react-router-dom";
 import { ArrowRight, Activity, Utensils, Mic, MessageSquare } from "lucide-react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+
+interface Goal {
+  goal_type: string;
+  target_value: number;
+  current_value: number;
+  unit: string;
+}
 
 const Index = () => {
+  const [goals, setGoals] = useState<Goal[]>([]);
+
+  useEffect(() => {
+    const fetchGoals = async () => {
+      const { data: userGoals, error } = await supabase
+        .from('user_goals')
+        .select('*');
+
+      if (!error && userGoals) {
+        setGoals(userGoals);
+      }
+    };
+
+    fetchGoals();
+  }, []);
+
+  const getGoalByType = (type: string) => {
+    return goals.find(goal => goal.goal_type === type);
+  };
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-900">Dashboard Overview</h2>
@@ -22,8 +51,8 @@ const Index = () => {
               </div>
               <HealthMetric
                 label="Daily Goals Progress"
-                value={2}
-                target={3}
+                value={goals.filter(g => (g.current_value >= g.target_value)).length}
+                target={goals.length}
                 unit="completed"
               />
               <div className="flex items-center justify-between text-sm text-gray-500">
@@ -86,44 +115,28 @@ const Index = () => {
       <div className="grid gap-6 md:grid-cols-2">
         <DashboardCard title="Recent Goals" className="h-full">
           <div className="space-y-4">
-            <HealthGoal
-              title="Daily Steps"
-              description="Reach 10,000 steps"
-              completed={false}
-            />
-            <HealthGoal
-              title="Water Intake"
-              description="Drink 2.5L of water"
-              completed={true}
-            />
-            <HealthGoal
-              title="Sleep Duration"
-              description="Sleep 8 hours"
-              completed={false}
-            />
+            {goals.map((goal) => (
+              <HealthGoal
+                key={goal.goal_type}
+                title={`Daily ${goal.goal_type.charAt(0).toUpperCase() + goal.goal_type.slice(1)}`}
+                description={`Reach ${goal.target_value} ${goal.unit}`}
+                completed={goal.current_value >= goal.target_value}
+              />
+            ))}
           </div>
         </DashboardCard>
 
         <DashboardCard title="Quick Stats" className="h-full">
           <div className="space-y-6">
-            <HealthMetric
-              label="Steps Today"
-              value={6500}
-              target={10000}
-              unit="steps"
-            />
-            <HealthMetric
-              label="Water Intake"
-              value={1.5}
-              target={2.5}
-              unit="L"
-            />
-            <HealthMetric
-              label="Sleep Last Night"
-              value={6.5}
-              target={8}
-              unit="hours"
-            />
+            {goals.map((goal) => (
+              <HealthMetric
+                key={goal.goal_type}
+                label={`${goal.goal_type.charAt(0).toUpperCase() + goal.goal_type.slice(1)} Today`}
+                value={goal.current_value}
+                target={goal.target_value}
+                unit={goal.unit}
+              />
+            ))}
           </div>
         </DashboardCard>
       </div>

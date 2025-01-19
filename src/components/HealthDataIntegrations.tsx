@@ -112,12 +112,13 @@ export function HealthDataIntegrations() {
                 </div>
               </Button>
               {isAppleHealth && (
-                <Input
-                  type="file"
-                  accept=".xml"
-                  onChange={handleFileChange}
-                  className="w-full"
-                />
+                <div className="w-full">
+                  <Input
+                    type="file"
+                    accept=".xml"
+                    onChange={handleFileChange}
+                  />
+                </div>
               )}
             </div>
           );

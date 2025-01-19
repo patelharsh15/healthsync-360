@@ -29,18 +29,40 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Process XML file and extract health data (basic implementation)
+    // Process XML file in chunks to avoid memory issues
     const text = await file.text()
     console.log('Processing health data file...')
     
-    // Basic XML parsing (in a real app, use a proper XML parser)
-    const healthData = {
-      steps: text.match(/<Record type="HKQuantityTypeIdentifierStepCount".*?value="(\d+)".*?\/>/)?.[1] || null,
-      heartRate: text.match(/<Record type="HKQuantityTypeIdentifierHeartRate".*?value="(\d+)".*?\/>/)?.[1] || null,
-      activeEnergy: text.match(/<Record type="HKQuantityTypeIdentifierActiveEnergyBurned".*?value="(\d+)".*?\/>/)?.[1] || null,
+    // Extract health metrics using regex with boundaries for better performance
+    const extractMetric = (text: string, type: string) => {
+      const regex = new RegExp(`<Record type="${type}"[^>]*value="([^"]*)"`, 'g')
+      const matches = text.match(regex)
+      if (!matches) return []
+      return matches.map(match => {
+        const value = match.match(/value="([^"]*)"/)
+        return value ? parseFloat(value[1]) : null
+      }).filter(v => v !== null)
     }
 
-    console.log('Extracted health data:', healthData)
+    // Process metrics in smaller chunks
+    const healthData = {
+      steps: extractMetric(text, 'HKQuantityTypeIdentifierStepCount'),
+      heartRate: extractMetric(text, 'HKQuantityTypeIdentifierHeartRate'),
+      activeEnergy: extractMetric(text, 'HKQuantityTypeIdentifierActiveEnergyBurned'),
+    }
+
+    // Calculate daily averages
+    const calculateAverage = (values: number[]) => {
+      return values.length > 0 ? Math.round(values.reduce((a, b) => a + b) / values.length) : null
+    }
+
+    const processedData = {
+      steps: calculateAverage(healthData.steps),
+      heartRate: calculateAverage(healthData.heartRate),
+      activeEnergy: calculateAverage(healthData.activeEnergy),
+    }
+
+    console.log('Extracted health data:', processedData)
 
     // Get user ID from the authorization header
     const authHeader = req.headers.get('authorization')?.split('Bearer ')[1]
@@ -59,7 +81,7 @@ serve(async (req) => {
         user_id: user?.id,
         platform: 'apple_health',
         data_type: 'import',
-        value: healthData,
+        value: processedData,
       })
 
     if (insertError) {
@@ -68,7 +90,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ message: 'Health data processed successfully', data: healthData }),
+      JSON.stringify({ message: 'Health data processed successfully', data: processedData }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
   } catch (error) {

@@ -41,7 +41,14 @@ export function HealthChat() {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw new Error(error.message);
+      }
+
+      if (!data || !data.choices || !data.choices[0] || !data.choices[0].message) {
+        throw new Error('Invalid response format from Groq API');
+      }
 
       const assistantMessage = {
         role: 'assistant' as const,
@@ -50,9 +57,10 @@ export function HealthChat() {
 
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
+      console.error('Chat error:', error);
       toast({
         title: "Error",
-        description: "Failed to get response. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to get response. Please try again.",
         variant: "destructive",
       });
     } finally {

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { DashboardCard } from "./DashboardCard";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { FitbitIcon, StravaIcon, GoogleFitIcon, AppleHealthIcon } from "lucide-react";
+import { Activity, Heart, Watch, Apple } from "lucide-react";
 
 type Platform = 'fitbit' | 'strava' | 'google_fit' | 'apple_health';
 
@@ -16,22 +16,22 @@ interface PlatformConfig {
 const platforms: Record<Platform, PlatformConfig> = {
   fitbit: {
     name: "Fitbit",
-    icon: FitbitIcon,
+    icon: Watch,
     authUrl: "https://www.fitbit.com/oauth2/authorize"
   },
   strava: {
     name: "Strava",
-    icon: StravaIcon,
+    icon: Activity,
     authUrl: "https://www.strava.com/oauth/authorize"
   },
   google_fit: {
     name: "Google Fit",
-    icon: GoogleFitIcon,
+    icon: Heart,
     authUrl: "https://accounts.google.com/o/oauth2/v2/auth"
   },
   apple_health: {
     name: "Apple Health",
-    icon: AppleHealthIcon
+    icon: Apple
   }
 };
 
@@ -97,7 +97,7 @@ export function HealthDataIntegrations() {
   };
 
   return (
-    <DashboardCard title="Health Data Integrations" className="animate-fadeIn">
+    <DashboardCard title="Health Data Integrations">
       <div className="grid gap-4 md:grid-cols-2">
         {Object.entries(platforms).map(([key, platform]) => {
           const Icon = platform.icon;

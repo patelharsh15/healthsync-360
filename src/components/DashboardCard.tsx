@@ -1,18 +1,18 @@
 import { cn } from "@/lib/utils";
 
 interface DashboardCardProps {
+  title?: string;
   children: React.ReactNode;
   className?: string;
-  title?: string;
 }
 
-export const DashboardCard = ({ children, className, title }: DashboardCardProps) => {
+export function DashboardCard({ title, children, className }: DashboardCardProps) {
   return (
-    <div className={cn("bg-white p-6 rounded-lg shadow-sm", className)}>
+    <div className={cn("bg-white rounded-lg shadow-sm border p-4", className)}>
       {title && (
-        <h2 className="text-lg font-semibold mb-4">{title}</h2>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>
       )}
       {children}
     </div>
   );
-};
+}

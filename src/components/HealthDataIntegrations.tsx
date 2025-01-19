@@ -40,7 +40,7 @@ export function HealthDataIntegrations() {
   };
 
   return (
-    <DashboardCard title="Health Data Integrations">
+    <DashboardCard title="Health Data Integrations" className="h-full">
       <div className="grid gap-4 md:grid-cols-2">
         {Object.entries(platforms).map(([key, platform]) => {
           const Icon = platform.icon;

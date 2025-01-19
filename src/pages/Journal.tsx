@@ -89,7 +89,7 @@ const Journal = () => {
           )}
         </div>
 
-        <HistoryList />
+        <HistoryList type="journal" />
       </div>
     </div>
   );

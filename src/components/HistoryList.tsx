@@ -13,64 +13,87 @@ interface HistoryItem {
   response?: string;
 }
 
-export function HistoryList() {
+interface HistoryListProps {
+  type?: 'chat' | 'meal' | 'journal';
+}
+
+export function HistoryList({ type }: HistoryListProps) {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchHistory();
-  }, []);
+  }, [type]);
 
   const fetchHistory = async () => {
     try {
-      // Fetch chat history
-      const { data: chatData, error: chatError } = await supabase
-        .from('chat_history')
-        .select('*')
-        .order('created_at', { ascending: false });
+      let combinedHistory: HistoryItem[] = [];
 
-      if (chatError) throw chatError;
+      // Fetch chat history if type is chat or undefined
+      if (!type || type === 'chat') {
+        const { data: chatData, error: chatError } = await supabase
+          .from('chat_history')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-      // Fetch meal analysis history
-      const { data: mealData, error: mealError } = await supabase
-        .from('meal_analysis')
-        .select('*')
-        .order('created_at', { ascending: false });
+        if (chatError) throw chatError;
 
-      if (mealError) throw mealError;
+        combinedHistory = [
+          ...combinedHistory,
+          ...(chatData?.map(chat => ({
+            id: chat.id,
+            created_at: chat.created_at,
+            type: 'chat' as const,
+            content: chat.message,
+            response: chat.response
+          })) || [])
+        ];
+      }
 
-      // Fetch voice journal history
-      const { data: journalData, error: journalError } = await supabase
-        .from('voice_journal')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Fetch meal analysis history if type is meal or undefined
+      if (!type || type === 'meal') {
+        const { data: mealData, error: mealError } = await supabase
+          .from('meal_analysis')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-      if (journalError) throw journalError;
+        if (mealError) throw mealError;
 
-      // Combine and format all history items
-      const combinedHistory: HistoryItem[] = [
-        ...(chatData?.map(chat => ({
-          id: chat.id,
-          created_at: chat.created_at,
-          type: 'chat' as const,
-          content: chat.message,
-          response: chat.response
-        })) || []),
-        ...(mealData?.map(meal => ({
-          id: meal.id,
-          created_at: meal.created_at,
-          type: 'meal' as const,
-          content: meal.analysis
-        })) || []),
-        ...(journalData?.map(journal => ({
-          id: journal.id,
-          created_at: journal.created_at,
-          type: 'journal' as const,
-          content: journal.transcript || 'Voice recording',
-          response: journal.analysis
-        })) || [])
-      ].sort((a, b) => 
+        combinedHistory = [
+          ...combinedHistory,
+          ...(mealData?.map(meal => ({
+            id: meal.id,
+            created_at: meal.created_at,
+            type: 'meal' as const,
+            content: meal.analysis === 'Processing...' ? 'Image uploaded, waiting for analysis...' : meal.analysis
+          })) || [])
+        ];
+      }
+
+      // Fetch voice journal history if type is journal or undefined
+      if (!type || type === 'journal') {
+        const { data: journalData, error: journalError } = await supabase
+          .from('voice_journal')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (journalError) throw journalError;
+
+        combinedHistory = [
+          ...combinedHistory,
+          ...(journalData?.map(journal => ({
+            id: journal.id,
+            created_at: journal.created_at,
+            type: 'journal' as const,
+            content: journal.transcript || 'Voice recording',
+            response: journal.analysis
+          })) || [])
+        ];
+      }
+
+      // Sort all history items by date
+      combinedHistory.sort((a, b) => 
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
 
@@ -87,8 +110,21 @@ export function HistoryList() {
     }
   };
 
+  const getHistoryTitle = () => {
+    switch (type) {
+      case 'chat':
+        return 'Chat History';
+      case 'meal':
+        return 'Meal Analysis History';
+      case 'journal':
+        return 'Voice Journal History';
+      default:
+        return 'History';
+    }
+  };
+
   return (
-    <DashboardCard title="History" className="h-[500px]">
+    <DashboardCard title={getHistoryTitle()} className="h-[500px]">
       <ScrollArea className="h-[450px] w-full pr-4">
         {isLoading ? (
           <div className="flex items-center justify-center h-full">

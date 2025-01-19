@@ -94,7 +94,7 @@ const Meals = () => {
           )}
         </div>
 
-        <HistoryList />
+        <HistoryList type="meal" />
       </div>
     </div>
   );

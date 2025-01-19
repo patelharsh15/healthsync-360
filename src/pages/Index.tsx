@@ -3,6 +3,7 @@ import { HealthMetric } from "@/components/HealthMetric";
 import { HealthGoal } from "@/components/HealthGoal";
 import { MealAnalysis } from "@/components/MealAnalysis";
 import { VoiceJournal } from "@/components/VoiceJournal";
+import { HealthChat } from "@/components/HealthChat";
 
 const Index = () => {
   return (
@@ -59,6 +60,7 @@ const Index = () => {
 
           <MealAnalysis />
           <VoiceJournal />
+          <HealthChat />
         </div>
       </main>
     </div>

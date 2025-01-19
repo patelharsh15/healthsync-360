@@ -13,6 +13,12 @@ const Meals = () => {
   const analyzeMeal = async (imageBase64: string) => {
     setIsAnalyzing(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
       const { data, error } = await supabase.functions.invoke('groq-chat', {
         body: {
           messages: [
@@ -35,7 +41,19 @@ const Meals = () => {
         throw new Error('Invalid response format from AI');
       }
 
-      setNutritionalInsights(data.choices[0].message.content);
+      const analysis = data.choices[0].message.content;
+      setNutritionalInsights(analysis);
+
+      // Update the analysis in the database
+      const { error: updateError } = await supabase
+        .from('meal_analysis')
+        .update({ analysis })
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (updateError) throw updateError;
+
       toast({
         title: "Analysis Complete",
         description: "Nutritional insights have been generated for your meal.",
@@ -75,6 +93,6 @@ const Meals = () => {
       </div>
     </div>
   );
-}
+};
 
 export default Meals;

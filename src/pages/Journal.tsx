@@ -12,6 +12,12 @@ const Journal = () => {
   const processJournalEntry = async (audioBlob: Blob) => {
     setIsProcessing(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
       const reader = new FileReader();
       reader.readAsDataURL(audioBlob);
       reader.onloadend = async () => {
@@ -35,7 +41,19 @@ const Journal = () => {
 
         if (error) throw error;
 
-        setJournalInsights(data.choices[0].message.content);
+        const analysis = data.choices[0].message.content;
+        setJournalInsights(analysis);
+
+        // Update the analysis in the database
+        const { error: updateError } = await supabase
+          .from('voice_journal')
+          .update({ analysis })
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (updateError) throw updateError;
+
         toast({
           title: "Analysis Complete",
           description: "Your journal entry has been analyzed.",
@@ -70,6 +88,6 @@ const Journal = () => {
       </div>
     </div>
   );
-}
+};
 
 export default Journal;

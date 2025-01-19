@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Camera } from "lucide-react";
 import { DashboardCard } from "./DashboardCard";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MealAnalysisProps {
   onImageSelect?: (imageBase64: string) => void;
@@ -39,16 +40,37 @@ export function MealAnalysis({ onImageSelect }: MealAnalysisProps) {
 
     setIsLoading(true);
     try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Upload image to storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${crypto.randomUUID()}.${fileExt}`;
+      const filePath = `meal-images/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('user-files')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('user-files')
+        .getPublicUrl(filePath);
+
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64String = reader.result as string;
         setSelectedImage(base64String);
         if (onImageSelect) {
-          // Remove the data:image/jpeg;base64, prefix
           const base64Data = base64String.split(',')[1];
           onImageSelect(base64Data);
         }
-        setIsLoading(false);
       };
       reader.onerror = () => {
         toast({
@@ -56,9 +78,20 @@ export function MealAnalysis({ onImageSelect }: MealAnalysisProps) {
           description: "Failed to read the image file",
           variant: "destructive",
         });
-        setIsLoading(false);
       };
       reader.readAsDataURL(file);
+
+      // Save to meal_analysis table
+      const { error: dbError } = await supabase
+        .from('meal_analysis')
+        .insert({
+          user_id: user.id,
+          image_url: publicUrl,
+          analysis: 'Processing...' // This will be updated when analysis is complete
+        });
+
+      if (dbError) throw dbError;
+
     } catch (error) {
       console.error('Error handling image upload:', error);
       toast({
@@ -66,6 +99,7 @@ export function MealAnalysis({ onImageSelect }: MealAnalysisProps) {
         description: "Failed to process the image",
         variant: "destructive",
       });
+    } finally {
       setIsLoading(false);
     }
   };

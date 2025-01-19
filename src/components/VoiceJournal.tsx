@@ -4,6 +4,8 @@ import { Mic } from "lucide-react";
 import { DashboardCard } from "./DashboardCard";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface VoiceJournalProps {
   onRecordingComplete?: (audioBlob: Blob) => void;
@@ -16,10 +18,10 @@ export function VoiceJournal({ onRecordingComplete }: VoiceJournalProps) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // Initialize speech recognition
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (SpeechRecognition) {
         recognitionRef.current = new SpeechRecognition();
@@ -57,6 +59,12 @@ export function VoiceJournal({ onRecordingComplete }: VoiceJournalProps) {
 
   const startRecording = async () => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
@@ -68,11 +76,40 @@ export function VoiceJournal({ onRecordingComplete }: VoiceJournalProps) {
         }
       };
 
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        
+        // Upload audio to storage
+        const fileName = `${crypto.randomUUID()}.webm`;
+        const filePath = `voice-journals/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('user-files')
+          .upload(filePath, audioBlob);
+
+        if (uploadError) throw uploadError;
+
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('user-files')
+          .getPublicUrl(filePath);
+
+        // Save to voice_journal table
+        const { error: dbError } = await supabase
+          .from('voice_journal')
+          .insert({
+            user_id: user.id,
+            audio_url: publicUrl,
+            transcript: transcript,
+            analysis: 'Processing...' // This will be updated when analysis is complete
+          });
+
+        if (dbError) throw dbError;
+
         if (onRecordingComplete) {
           onRecordingComplete(audioBlob);
         }
+
         stream.getTracks().forEach(track => track.stop());
         setRecordingTime(0);
       };
@@ -87,6 +124,11 @@ export function VoiceJournal({ onRecordingComplete }: VoiceJournalProps) {
       }
     } catch (error) {
       console.error('Error accessing microphone:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start recording. Please check your microphone permissions.",
+        variant: "destructive",
+      });
     }
   };
 

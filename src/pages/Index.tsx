@@ -1,6 +1,7 @@
 import { DashboardCard } from "@/components/DashboardCard";
 import { HealthMetric } from "@/components/HealthMetric";
 import { HealthGoal } from "@/components/HealthGoal";
+import { HealthDataIntegrations } from "@/components/HealthDataIntegrations";
 import { Link } from "react-router-dom";
 import { ArrowRight, Activity, Utensils, Mic, MessageSquare } from "lucide-react";
 
@@ -8,6 +9,8 @@ const Index = () => {
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-900">Dashboard Overview</h2>
+      
+      <HealthDataIntegrations />
       
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Link to="/progress" className="transition-transform hover:scale-105">

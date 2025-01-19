@@ -55,6 +55,23 @@ export function HealthChat() {
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+
+      // Save the chat history to the database
+      const { error: saveError } = await supabase
+        .from('chat_history')
+        .insert({
+          message: userMessage.content,
+          response: assistantMessage.content,
+        });
+
+      if (saveError) {
+        console.error('Error saving chat history:', saveError);
+        toast({
+          title: "Warning",
+          description: "Chat saved but history may not be updated immediately.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error('Chat error:', error);
       toast({

@@ -66,7 +66,8 @@ export function HistoryList({ type }: HistoryListProps) {
             id: meal.id,
             created_at: meal.created_at,
             type: 'meal' as const,
-            content: meal.analysis === 'Processing...' ? 'Image uploaded, waiting for analysis...' : meal.analysis
+            content: meal.analysis,
+            response: meal.image_url ? `Image URL: ${meal.image_url}` : undefined
           })) || [])
         ];
       }
@@ -91,6 +92,9 @@ export function HistoryList({ type }: HistoryListProps) {
           })) || [])
         ];
       }
+
+      // Filter out items with "Processing..." content
+      combinedHistory = combinedHistory.filter(item => item.content !== 'Processing...');
 
       // Sort all history items by date
       combinedHistory.sort((a, b) => 

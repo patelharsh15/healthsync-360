@@ -50,6 +50,7 @@ const Meals = () => {
         .from('meal_analysis')
         .update({ analysis })
         .eq('user_id', user.id)
+        .is('analysis', 'Processing...')
         .order('created_at', { ascending: false })
         .limit(1);
 

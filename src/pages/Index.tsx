@@ -3,9 +3,12 @@ import { HealthMetric } from "@/components/HealthMetric";
 import { HealthGoal } from "@/components/HealthGoal";
 import { HealthDataIntegrations } from "@/components/HealthDataIntegrations";
 import { Link } from "react-router-dom";
-import { ArrowRight, Activity, Utensils, Mic, MessageSquare } from "lucide-react";
+import { ArrowRight, Activity, Utensils, Mic, MessageSquare, Edit2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { GoalSettingForm } from "@/components/GoalSettingForm";
 
 interface Goal {
   goal_type: string;
@@ -16,28 +19,74 @@ interface Goal {
 
 const Index = () => {
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
-    const fetchGoals = async () => {
-      const { data: userGoals, error } = await supabase
-        .from('user_goals')
-        .select('*');
-
-      if (!error && userGoals) {
-        setGoals(userGoals);
+    const fetchUserAndGoals = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user.id) {
+        setUserId(session.user.id);
+        fetchGoals(session.user.id);
       }
     };
 
-    fetchGoals();
+    fetchUserAndGoals();
   }, []);
+
+  const fetchGoals = async (uid: string) => {
+    const { data: userGoals, error } = await supabase
+      .from('user_goals')
+      .select('*')
+      .eq('user_id', uid);
+
+    if (!error && userGoals) {
+      setGoals(userGoals);
+    }
+  };
+
+  const handleGoalsUpdate = () => {
+    if (userId) {
+      fetchGoals(userId);
+      setDialogOpen(false);
+    }
+  };
 
   const getGoalByType = (type: string) => {
     return goals.find(goal => goal.goal_type === type);
   };
 
+  const getCurrentGoals = () => {
+    return {
+      steps: getGoalByType('steps')?.target_value || 10000,
+      water: getGoalByType('water')?.target_value || 2.5,
+      sleep: getGoalByType('sleep')?.target_value || 8
+    };
+  };
+
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900">Dashboard Overview</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900">Dashboard Overview</h2>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="flex items-center gap-2">
+              <Edit2 className="h-4 w-4" />
+              Update Goals
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[600px]">
+            {userId && (
+              <GoalSettingForm
+                userId={userId}
+                initialGoals={getCurrentGoals()}
+                onUpdate={handleGoalsUpdate}
+                isUpdate
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+      </div>
       
       <HealthDataIntegrations />
       

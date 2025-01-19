@@ -2,16 +2,22 @@ import { useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
 interface GoalSettingFormProps {
   userId: string;
+  initialGoals?: {
+    steps?: number;
+    water?: number;
+    sleep?: number;
+  };
+  onUpdate?: () => void;
+  isUpdate?: boolean;
 }
 
-export function GoalSettingForm({ userId }: GoalSettingFormProps) {
+export function GoalSettingForm({ userId, initialGoals, onUpdate, isUpdate = false }: GoalSettingFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -23,43 +29,61 @@ export function GoalSettingForm({ userId }: GoalSettingFormProps) {
     const formData = new FormData(e.currentTarget);
     const goals = [
       {
-        goal_type: 'steps',
+        goal_type: 'steps' as const,
         target_value: Number(formData.get('steps')),
         unit: 'steps'
       },
       {
-        goal_type: 'water',
+        goal_type: 'water' as const,
         target_value: Number(formData.get('water')),
         unit: 'L'
       },
       {
-        goal_type: 'sleep',
+        goal_type: 'sleep' as const,
         target_value: Number(formData.get('sleep')),
         unit: 'hours'
       }
     ];
 
     try {
-      const { error } = await supabase.from('user_goals').insert(
-        goals.map(goal => ({
-          user_id: userId,
-          ...goal
-        }))
-      );
+      if (isUpdate) {
+        // Update existing goals
+        for (const goal of goals) {
+          const { error } = await supabase
+            .from('user_goals')
+            .update({ target_value: goal.target_value })
+            .eq('user_id', userId)
+            .eq('goal_type', goal.goal_type);
 
-      if (error) throw error;
+          if (error) throw error;
+        }
+      } else {
+        // Insert new goals
+        const { error } = await supabase.from('user_goals').insert(
+          goals.map(goal => ({
+            user_id: userId,
+            ...goal
+          }))
+        );
+
+        if (error) throw error;
+      }
 
       toast({
-        title: "Goals set successfully!",
-        description: "Your health goals have been saved.",
+        title: `Goals ${isUpdate ? 'updated' : 'set'} successfully!`,
+        description: `Your health goals have been ${isUpdate ? 'updated' : 'saved'}.`,
       });
 
-      navigate('/');
+      if (onUpdate) {
+        onUpdate();
+      } else {
+        navigate('/');
+      }
     } catch (error) {
       console.error('Error setting goals:', error);
       toast({
         title: "Error",
-        description: "Failed to set goals. Please try again.",
+        description: `Failed to ${isUpdate ? 'update' : 'set'} goals. Please try again.`,
         variant: "destructive",
       });
     } finally {
@@ -69,7 +93,9 @@ export function GoalSettingForm({ userId }: GoalSettingFormProps) {
 
   return (
     <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-sm">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Set Your Health Goals</h2>
+      <h2 className="text-2xl font-bold text-gray-900 mb-6">
+        {isUpdate ? 'Update Your Health Goals' : 'Set Your Health Goals'}
+      </h2>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
           <Label htmlFor="steps">Daily Steps Target</Label>
@@ -77,7 +103,7 @@ export function GoalSettingForm({ userId }: GoalSettingFormProps) {
             id="steps"
             name="steps"
             type="number"
-            defaultValue="10000"
+            defaultValue={initialGoals?.steps || "10000"}
             required
           />
         </div>
@@ -89,7 +115,7 @@ export function GoalSettingForm({ userId }: GoalSettingFormProps) {
             name="water"
             type="number"
             step="0.1"
-            defaultValue="2.5"
+            defaultValue={initialGoals?.water || "2.5"}
             required
           />
         </div>
@@ -101,13 +127,13 @@ export function GoalSettingForm({ userId }: GoalSettingFormProps) {
             name="sleep"
             type="number"
             step="0.5"
-            defaultValue="8"
+            defaultValue={initialGoals?.sleep || "8"}
             required
           />
         </div>
 
         <Button type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting ? "Setting goals..." : "Set Goals"}
+          {isSubmitting ? `${isUpdate ? 'Updating' : 'Setting'} goals...` : `${isUpdate ? 'Update' : 'Set'} Goals`}
         </Button>
       </form>
     </div>

@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { GoalSettingForm } from "@/components/GoalSettingForm";
 
 interface Goal {
+  id: string;
   goal_type: string;
   target_value: number;
   current_value: number;
@@ -166,7 +167,7 @@ const Index = () => {
           <div className="space-y-4">
             {goals.map((goal) => (
               <HealthGoal
-                key={goal.goal_type}
+                key={goal.id}
                 title={`Daily ${goal.goal_type.charAt(0).toUpperCase() + goal.goal_type.slice(1)}`}
                 description={`Reach ${goal.target_value} ${goal.unit}`}
                 completed={goal.current_value >= goal.target_value}
@@ -179,11 +180,13 @@ const Index = () => {
           <div className="space-y-6">
             {goals.map((goal) => (
               <HealthMetric
-                key={goal.goal_type}
+                key={goal.id}
                 label={`${goal.goal_type.charAt(0).toUpperCase() + goal.goal_type.slice(1)} Today`}
                 value={goal.current_value}
                 target={goal.target_value}
                 unit={goal.unit}
+                goalId={goal.id}
+                onUpdate={() => fetchGoals(userId!)}
               />
             ))}
           </div>

@@ -15,24 +15,26 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, image, audio } = await req.json()
-    console.log('Received request:', { hasImage: !!image, hasAudio: !!audio })
+    const { messages, image } = await req.json()
+    console.log('Received request:', { hasImage: !!image, messageCount: messages.length })
 
     if (!GROQ_API_KEY) {
       throw new Error('GROQ_API_KEY is not configured')
     }
 
-    // If there's an image or audio, add it to the user's message content
-    if (image || audio) {
-      const lastUserMessage = messages.find((m: any) => m.role === 'user')
-      if (lastUserMessage) {
-        lastUserMessage.content = [
-          { type: 'text', text: lastUserMessage.content },
-          image ? { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${image}` } } :
-          audio ? { type: 'audio', audio_url: { url: `data:audio/webm;base64,${audio}` } } : null
-        ].filter(Boolean)
-      }
+    // Format messages for Groq API
+    const formattedMessages = messages.map((msg: any) => ({
+      role: msg.role,
+      content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
+    }))
+
+    // If there's an image, add it to the system message context
+    if (image) {
+      const imageContext = `[Analysis context: The user has provided an image for analysis]`
+      formattedMessages[0].content = `${formattedMessages[0].content} ${imageContext}`
     }
+
+    console.log('Sending formatted messages to Groq:', formattedMessages)
 
     const response = await fetch(GROQ_API_URL, {
       method: 'POST',
@@ -42,7 +44,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: 'mixtral-8x7b-32768',
-        messages,
+        messages: formattedMessages,
         temperature: 0.7,
         max_tokens: 1024,
       }),

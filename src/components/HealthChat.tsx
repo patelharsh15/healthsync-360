@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSupabaseClient } from "@supabase/auth-helpers-react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DashboardCard } from "./DashboardCard";
@@ -15,7 +15,6 @@ export function HealthChat() {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const supabase = useSupabaseClient();
   const { toast } = useToast();
 
   const sendMessage = async (e: React.FormEvent) => {

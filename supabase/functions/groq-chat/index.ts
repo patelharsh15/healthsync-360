@@ -40,15 +40,18 @@ serve(async (req) => {
         },
       ];
     } else if (audio) {
-      // For audio analysis, we'll use a text-based prompt
+      // For audio analysis, we'll truncate the transcript to stay within limits
+      const maxLength = 15000; // Adjust this value based on testing
+      const truncatedAudio = audio.length > maxLength ? audio.substring(0, maxLength) + "..." : audio;
+      
       formattedMessages = [
         {
           role: "system",
-          content: "You are a health journal AI assistant. Analyze the voice journal entry and provide supportive feedback, identify patterns, and offer personalized health insights."
+          content: "You are a health journal AI assistant. Analyze the voice journal entry and provide supportive feedback, identify patterns, and offer personalized health insights. Keep your response concise and focused on the most important points."
         },
         {
           role: "user",
-          content: `Analyze this voice journal entry and provide detailed health insights and recommendations. The user said: ${audio}`
+          content: `Analyze this voice journal entry and provide brief, focused health insights and recommendations. The user said: ${truncatedAudio}`
         }
       ];
     } else {

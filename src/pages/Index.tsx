@@ -9,59 +9,56 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { GoalSettingForm } from "@/components/GoalSettingForm";
+import { useQuery } from "@tanstack/react-query";
 
 interface Goal {
   id: string;
   goal_type: string;
   target_value: number;
-  current_value: number;
+  current_value: number | null;
   unit: string;
 }
 
+const fetchUserGoals = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('user_goals')
+    .select('*')
+    .eq('user_id', userId);
+
+  if (error) throw error;
+  return data as Goal[];
+};
+
 const Index = () => {
-  const [goals, setGoals] = useState<Goal[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
-    const fetchUserAndGoals = async () => {
+    const getUserId = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user.id) {
         setUserId(session.user.id);
-        fetchGoals(session.user.id);
       }
     };
-
-    fetchUserAndGoals();
+    getUserId();
   }, []);
 
-  const fetchGoals = async (uid: string) => {
-    const { data: userGoals, error } = await supabase
-      .from('user_goals')
-      .select('*')
-      .eq('user_id', uid);
-
-    if (!error && userGoals) {
-      setGoals(userGoals);
-    }
-  };
+  const { data: goals = [], refetch: refetchGoals } = useQuery({
+    queryKey: ['goals', userId],
+    queryFn: () => userId ? fetchUserGoals(userId) : Promise.resolve([]),
+    enabled: !!userId,
+  });
 
   const handleGoalsUpdate = () => {
-    if (userId) {
-      fetchGoals(userId);
-      setDialogOpen(false);
-    }
-  };
-
-  const getGoalByType = (type: string) => {
-    return goals.find(goal => goal.goal_type === type);
+    refetchGoals();
+    setDialogOpen(false);
   };
 
   const getCurrentGoals = () => {
     return {
-      steps: getGoalByType('steps')?.target_value || 10000,
-      water: getGoalByType('water')?.target_value || 2.5,
-      sleep: getGoalByType('sleep')?.target_value || 8
+      steps: goals.find(goal => goal.goal_type === 'steps')?.target_value || 10000,
+      water: goals.find(goal => goal.goal_type === 'water')?.target_value || 2.5,
+      sleep: goals.find(goal => goal.goal_type === 'sleep')?.target_value || 8
     };
   };
 
@@ -101,7 +98,7 @@ const Index = () => {
               </div>
               <HealthMetric
                 label="Daily Goals Progress"
-                value={goals.filter(g => (g.current_value >= g.target_value)).length}
+                value={goals.filter(g => (g.current_value || 0) >= g.target_value).length}
                 target={goals.length}
                 unit="completed"
               />
@@ -169,8 +166,8 @@ const Index = () => {
               <HealthGoal
                 key={goal.id}
                 title={`Daily ${goal.goal_type.charAt(0).toUpperCase() + goal.goal_type.slice(1)}`}
-                description={`Reach ${goal.target_value} ${goal.unit}`}
-                completed={goal.current_value >= goal.target_value}
+                description={`${(goal.current_value || 0).toLocaleString()} / ${goal.target_value.toLocaleString()} ${goal.unit}`}
+                completed={(goal.current_value || 0) >= goal.target_value}
               />
             ))}
           </div>
@@ -182,11 +179,11 @@ const Index = () => {
               <HealthMetric
                 key={goal.id}
                 label={`${goal.goal_type.charAt(0).toUpperCase() + goal.goal_type.slice(1)} Today`}
-                value={goal.current_value}
+                value={goal.current_value || 0}
                 target={goal.target_value}
                 unit={goal.unit}
                 goalId={goal.id}
-                onUpdate={() => fetchGoals(userId!)}
+                onUpdate={refetchGoals}
               />
             ))}
           </div>

@@ -4,7 +4,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Activity, Heart, Watch, Apple } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
-import { Input } from "@/components/ui/input";
 
 type Platform = 'fitbit' | 'strava' | 'google_fit' | 'apple_health';
 
@@ -112,10 +111,11 @@ export function HealthDataIntegrations() {
               </Button>
               {isAppleHealth && (
                 <div className="w-full">
-                  <Input
+                  <input
                     type="file"
                     accept=".xml"
                     onChange={handleFileChange}
+                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90"
                   />
                 </div>
               )}

@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 interface DashboardCardProps extends React.HTMLAttributes<HTMLDivElement> {
   title?: string;
   children: React.ReactNode;
+  className?: string;
 }
 
 export function DashboardCard({ title, children, className, ...props }: DashboardCardProps) {

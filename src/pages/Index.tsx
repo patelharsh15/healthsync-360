@@ -2,7 +2,7 @@ import { DashboardCard } from "@/components/DashboardCard";
 import { HealthMetric } from "@/components/HealthMetric";
 import { HealthGoal } from "@/components/HealthGoal";
 import { Link } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Activity, Utensils, Mic, MessageSquare } from "lucide-react";
 
 const Index = () => {
   return (
@@ -13,6 +13,10 @@ const Index = () => {
         <Link to="/progress" className="transition-transform hover:scale-105">
           <DashboardCard title="Progress Overview" className="h-full">
             <div className="space-y-4">
+              <div className="flex items-center space-x-3 text-primary">
+                <Activity className="h-5 w-5" />
+                <span className="font-medium">Track Your Progress</span>
+              </div>
               <HealthMetric
                 label="Daily Goals Progress"
                 value={2}
@@ -28,9 +32,13 @@ const Index = () => {
         </Link>
 
         <Link to="/meals" className="transition-transform hover:scale-105">
-          <DashboardCard title="Recent Meals" className="h-full">
+          <DashboardCard title="Meal Analysis" className="h-full">
             <div className="space-y-4">
-              <p className="text-sm text-gray-500">Track and analyze your meals</p>
+              <div className="flex items-center space-x-3 text-primary">
+                <Utensils className="h-5 w-5" />
+                <span className="font-medium">Analyze Your Meals</span>
+              </div>
+              <p className="text-sm text-gray-500">Get AI-powered nutritional insights for your meals</p>
               <div className="flex items-center justify-between text-sm text-gray-500">
                 <span>Start Analysis</span>
                 <ArrowRight className="h-4 w-4" />
@@ -42,7 +50,11 @@ const Index = () => {
         <Link to="/journal" className="transition-transform hover:scale-105">
           <DashboardCard title="Voice Journal" className="h-full">
             <div className="space-y-4">
-              <p className="text-sm text-gray-500">Record your health journey</p>
+              <div className="flex items-center space-x-3 text-primary">
+                <Mic className="h-5 w-5" />
+                <span className="font-medium">Record Your Journey</span>
+              </div>
+              <p className="text-sm text-gray-500">Log your health journey with voice notes</p>
               <div className="flex items-center justify-between text-sm text-gray-500">
                 <span>Start Recording</span>
                 <ArrowRight className="h-4 w-4" />
@@ -54,6 +66,10 @@ const Index = () => {
         <Link to="/chat" className="transition-transform hover:scale-105 md:col-span-2 lg:col-span-3">
           <DashboardCard title="Health Assistant" className="h-full">
             <div className="space-y-4">
+              <div className="flex items-center space-x-3 text-primary">
+                <MessageSquare className="h-5 w-5" />
+                <span className="font-medium">AI Health Assistant</span>
+              </div>
               <p className="text-sm text-gray-500">Get personalized health advice and support</p>
               <div className="flex items-center justify-between text-sm text-gray-500">
                 <span>Start Chat</span>
@@ -62,6 +78,51 @@ const Index = () => {
             </div>
           </DashboardCard>
         </Link>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <DashboardCard title="Recent Goals" className="h-full">
+          <div className="space-y-4">
+            <HealthGoal
+              title="Daily Steps"
+              description="Reach 10,000 steps"
+              completed={false}
+            />
+            <HealthGoal
+              title="Water Intake"
+              description="Drink 2.5L of water"
+              completed={true}
+            />
+            <HealthGoal
+              title="Sleep Duration"
+              description="Sleep 8 hours"
+              completed={false}
+            />
+          </div>
+        </DashboardCard>
+
+        <DashboardCard title="Quick Stats" className="h-full">
+          <div className="space-y-6">
+            <HealthMetric
+              label="Steps Today"
+              value={6500}
+              target={10000}
+              unit="steps"
+            />
+            <HealthMetric
+              label="Water Intake"
+              value={1.5}
+              target={2.5}
+              unit="L"
+            />
+            <HealthMetric
+              label="Sleep Last Night"
+              value={6.5}
+              target={8}
+              unit="hours"
+            />
+          </div>
+        </DashboardCard>
       </div>
     </div>
   );

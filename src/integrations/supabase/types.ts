@@ -9,6 +9,30 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      chat_history: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          response: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          response: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          response?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       health_data: {
         Row: {
           data_type: string
@@ -36,6 +60,51 @@ export type Database = {
         }
         Relationships: []
       }
+      meal_analysis: {
+        Row: {
+          analysis: string
+          created_at: string
+          id: string
+          image_url: string | null
+          user_id: string
+        }
+        Insert: {
+          analysis: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          user_id: string
+        }
+        Update: {
+          analysis?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          id: string
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          id: string
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
       User: {
         Row: {
           createdAt: string
@@ -51,6 +120,33 @@ export type Database = {
           createdAt?: string
           email?: string
           id?: string
+        }
+        Relationships: []
+      }
+      voice_journal: {
+        Row: {
+          analysis: string | null
+          audio_url: string | null
+          created_at: string
+          id: string
+          transcript: string | null
+          user_id: string
+        }
+        Insert: {
+          analysis?: string | null
+          audio_url?: string | null
+          created_at?: string
+          id?: string
+          transcript?: string | null
+          user_id: string
+        }
+        Update: {
+          analysis?: string | null
+          audio_url?: string | null
+          created_at?: string
+          id?: string
+          transcript?: string | null
+          user_id?: string
         }
         Relationships: []
       }

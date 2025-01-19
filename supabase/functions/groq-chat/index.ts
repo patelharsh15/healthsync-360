@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY');
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_TRANSCRIPTION_URL = 'https://api.groq.com/openai/v1/audio/transcriptions';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -40,9 +41,43 @@ serve(async (req) => {
         },
       ];
     } else if (audio) {
-      // For audio analysis, we'll truncate the transcript to stay within limits
-      const maxLength = 15000; // Adjust this value based on testing
-      const truncatedAudio = audio.length > maxLength ? audio.substring(0, maxLength) + "..." : audio;
+      // First, get the transcription using Groq's audio API
+      console.log('Transcribing audio with Groq API...');
+      
+      const formData = new FormData();
+      // Convert base64 to blob
+      const binaryString = atob(audio);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const audioBlob = new Blob([bytes], { type: 'audio/webm' });
+      
+      formData.append('file', audioBlob, 'audio.webm');
+      formData.append('model', 'distil-whisper-large-v3-en');
+
+      const transcriptionResponse = await fetch(GROQ_TRANSCRIPTION_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${GROQ_API_KEY}`,
+        },
+        body: formData,
+      });
+
+      if (!transcriptionResponse.ok) {
+        const error = await transcriptionResponse.text();
+        console.error('Groq Transcription API error:', error);
+        throw new Error(`Groq Transcription API error: ${error}`);
+      }
+
+      const transcriptionData = await transcriptionResponse.json();
+      console.log('Transcription received:', transcriptionData);
+
+      // For analysis, we'll truncate the transcript to stay within limits
+      const maxLength = 15000;
+      const transcription = transcriptionData.text;
+      const truncatedTranscription = transcription.length > maxLength ? 
+        transcription.substring(0, maxLength) + "..." : transcription;
       
       formattedMessages = [
         {
@@ -51,7 +86,7 @@ serve(async (req) => {
         },
         {
           role: "user",
-          content: `Analyze this voice journal entry and provide brief, focused health insights and recommendations. The user said: ${truncatedAudio}`
+          content: `Analyze this voice journal entry and provide brief, focused health insights and recommendations. The user said: ${truncatedTranscription}`
         }
       ];
     } else {

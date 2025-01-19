@@ -3,6 +3,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardCard } from "@/components/DashboardCard";
+import { HistoryList } from "@/components/HistoryList";
 
 const Journal = () => {
   const [journalInsights, setJournalInsights] = useState<string | null>(null);
@@ -72,19 +73,23 @@ const Journal = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6">
       <h2 className="text-2xl font-bold text-gray-900">Voice Journal</h2>
       
-      <div className="grid gap-6 md:grid-cols-2">
-        <VoiceJournal onRecordingComplete={processJournalEntry} />
-        
-        {journalInsights && (
-          <DashboardCard title="AI Analysis" className="animate-fadeIn">
-            <div className="prose prose-sm">
-              <p className="text-gray-700 whitespace-pre-line">{journalInsights}</p>
-            </div>
-          </DashboardCard>
-        )}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="space-y-6">
+          <VoiceJournal onRecordingComplete={processJournalEntry} />
+          
+          {journalInsights && (
+            <DashboardCard title="AI Analysis" className="animate-fadeIn">
+              <div className="prose prose-sm">
+                <p className="text-gray-700 whitespace-pre-line">{journalInsights}</p>
+              </div>
+            </DashboardCard>
+          )}
+        </div>
+
+        <HistoryList />
       </div>
     </div>
   );

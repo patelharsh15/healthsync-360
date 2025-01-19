@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardCard } from "@/components/DashboardCard";
 import { Loader2 } from "lucide-react";
+import { HistoryList } from "@/components/HistoryList";
 
 const Meals = () => {
   const [nutritionalInsights, setNutritionalInsights] = useState<string | null>(null);
@@ -71,25 +72,29 @@ const Meals = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6">
       <h2 className="text-2xl font-bold text-gray-900">Meal Analysis</h2>
       
-      <div className="grid gap-6 md:grid-cols-2">
-        <MealAnalysis onImageSelect={analyzeMeal} />
-        
-        {isAnalyzing ? (
-          <DashboardCard title="Analyzing..." className="animate-fadeIn">
-            <div className="flex items-center justify-center h-48">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          </DashboardCard>
-        ) : nutritionalInsights && (
-          <DashboardCard title="Nutritional Insights" className="animate-fadeIn">
-            <div className="prose prose-sm">
-              <p className="text-gray-700 whitespace-pre-line">{nutritionalInsights}</p>
-            </div>
-          </DashboardCard>
-        )}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="space-y-6">
+          <MealAnalysis onImageSelect={analyzeMeal} />
+          
+          {isAnalyzing ? (
+            <DashboardCard title="Analyzing..." className="animate-fadeIn">
+              <div className="flex items-center justify-center h-48">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            </DashboardCard>
+          ) : nutritionalInsights && (
+            <DashboardCard title="Nutritional Insights" className="animate-fadeIn">
+              <div className="prose prose-sm">
+                <p className="text-gray-700 whitespace-pre-line">{nutritionalInsights}</p>
+              </div>
+            </DashboardCard>
+          )}
+        </div>
+
+        <HistoryList />
       </div>
     </div>
   );

@@ -1,31 +1,30 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY')
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions'
+const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY');
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+};
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { messages, image } = await req.json()
-    console.log('Received request:', { hasImage: !!image, messageCount: messages.length })
+    const { messages, image, audio } = await req.json();
+    console.log('Received request:', { hasImage: !!image, hasAudio: !!audio, messageCount: messages.length });
 
     if (!GROQ_API_KEY) {
-      throw new Error('GROQ_API_KEY is not configured')
+      throw new Error('GROQ_API_KEY is not configured');
     }
 
     let formattedMessages;
     
     if (image) {
-      // Format message specifically for image analysis
       formattedMessages = [
         {
           role: "user",
@@ -40,15 +39,26 @@ serve(async (req) => {
           ],
         },
       ];
+    } else if (audio) {
+      // For audio analysis, we'll use a text-based prompt
+      formattedMessages = [
+        {
+          role: "system",
+          content: "You are a health journal AI assistant. Analyze the voice journal entry and provide supportive feedback, identify patterns, and offer personalized health insights."
+        },
+        {
+          role: "user",
+          content: `Analyze this voice journal entry and provide detailed health insights and recommendations. The user said: ${audio}`
+        }
+      ];
     } else {
-      // Handle regular text messages
       formattedMessages = messages.map((msg: any) => ({
         role: msg.role,
         content: msg.content
       }));
     }
 
-    console.log('Sending formatted messages to Groq:', JSON.stringify(formattedMessages, null, 2))
+    console.log('Sending formatted messages to Groq:', JSON.stringify(formattedMessages, null, 2));
 
     const response = await fetch(GROQ_API_URL, {
       method: 'POST',
@@ -62,28 +72,28 @@ serve(async (req) => {
         temperature: 0.7,
         max_tokens: 1024,
       }),
-    })
+    });
 
     if (!response.ok) {
-      const error = await response.text()
-      console.error('Groq API error:', error)
-      throw new Error(`Groq API error: ${error}`)
+      const error = await response.text();
+      console.error('Groq API error:', error);
+      throw new Error(`Groq API error: ${error}`);
     }
 
-    const data = await response.json()
-    console.log('Groq API response:', data)
+    const data = await response.json();
+    console.log('Groq API response:', data);
 
     return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    });
   } catch (error) {
-    console.error('Error in groq-chat function:', error)
+    console.error('Error in groq-chat function:', error);
     return new Response(
       JSON.stringify({ error: error.message || 'An error occurred' }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
-    )
+    );
   }
-})
+});

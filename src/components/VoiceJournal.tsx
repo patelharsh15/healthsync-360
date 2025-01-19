@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Mic } from "lucide-react";
 import { DashboardCard } from "./DashboardCard";
+import { cn } from "@/lib/utils";
 
 export function VoiceJournal() {
   const [isRecording, setIsRecording] = useState(false);

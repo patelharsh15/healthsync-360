@@ -27,6 +27,13 @@ export function HealthChat() {
     setIsLoading(true);
 
     try {
+      // Get the current user's ID
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
       const { data, error } = await supabase.functions.invoke('groq-chat', {
         body: {
           messages: [
@@ -56,10 +63,11 @@ export function HealthChat() {
 
       setMessages(prev => [...prev, assistantMessage]);
 
-      // Save the chat history to the database
+      // Save the chat history to the database with user_id
       const { error: saveError } = await supabase
         .from('chat_history')
         .insert({
+          user_id: user.id,
           message: userMessage.content,
           response: assistantMessage.content,
         });

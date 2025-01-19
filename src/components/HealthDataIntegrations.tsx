@@ -60,7 +60,6 @@ export function HealthDataIntegrations() {
           description: "Health data imported successfully!",
         });
 
-        // Clear the selected file
         setSelectedFile(null);
       } catch (error) {
         console.error('Error uploading health data:', error);

@@ -7,7 +7,6 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -23,46 +22,63 @@ serve(async (req) => {
       )
     }
 
-    // Create Supabase client
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Process XML file in chunks to avoid memory issues
+    // Read file in chunks to reduce memory usage
     const text = await file.text()
-    console.log('Processing health data file...')
+    const chunkSize = 1000000 // Process 1MB at a time
+    const chunks = []
     
-    // Extract health metrics using regex with boundaries for better performance
-    const extractMetric = (text: string, type: string) => {
-      const regex = new RegExp(`<Record type="${type}"[^>]*value="([^"]*)"`, 'g')
-      const matches = text.match(regex)
-      if (!matches) return []
-      return matches.map(match => {
-        const value = match.match(/value="([^"]*)"/)
-        return value ? parseFloat(value[1]) : null
-      }).filter(v => v !== null)
+    for (let i = 0; i < text.length; i += chunkSize) {
+      chunks.push(text.slice(i, i + chunkSize))
     }
 
-    // Process metrics in smaller chunks
-    const healthData = {
-      steps: extractMetric(text, 'HKQuantityTypeIdentifierStepCount'),
-      heartRate: extractMetric(text, 'HKQuantityTypeIdentifierHeartRate'),
-      activeEnergy: extractMetric(text, 'HKQuantityTypeIdentifierActiveEnergyBurned'),
+    // Process health metrics more efficiently
+    const metrics = {
+      steps: [] as number[],
+      heartRate: [] as number[],
+      activeEnergy: [] as number[]
     }
 
-    // Calculate daily averages
+    // Process each chunk
+    for (const chunk of chunks) {
+      // Extract metrics using more efficient regex
+      const processMetric = (type: string) => {
+        const pattern = new RegExp(`<Record[^>]*type="${type}"[^>]*value="([\\d.]+)"`, 'g')
+        let match
+        const values: number[] = []
+        
+        while ((match = pattern.exec(chunk)) !== null) {
+          const value = parseFloat(match[1])
+          if (!isNaN(value)) {
+            values.push(value)
+          }
+        }
+        return values
+      }
+
+      metrics.steps.push(...processMetric('HKQuantityTypeIdentifierStepCount'))
+      metrics.heartRate.push(...processMetric('HKQuantityTypeIdentifierHeartRate'))
+      metrics.activeEnergy.push(...processMetric('HKQuantityTypeIdentifierActiveEnergyBurned'))
+    }
+
+    // Calculate daily averages more efficiently
     const calculateAverage = (values: number[]) => {
-      return values.length > 0 ? Math.round(values.reduce((a, b) => a + b) / values.length) : null
+      if (values.length === 0) return null
+      const sum = values.reduce((a, b) => a + b, 0)
+      return Math.round(sum / values.length)
     }
 
     const processedData = {
-      steps: calculateAverage(healthData.steps),
-      heartRate: calculateAverage(healthData.heartRate),
-      activeEnergy: calculateAverage(healthData.activeEnergy),
+      steps: calculateAverage(metrics.steps),
+      heartRate: calculateAverage(metrics.heartRate),
+      activeEnergy: calculateAverage(metrics.activeEnergy)
     }
 
-    console.log('Extracted health data:', processedData)
+    console.log('Processed health data:', processedData)
 
     // Get user ID from the authorization header
     const authHeader = req.headers.get('authorization')?.split('Bearer ')[1]
@@ -70,11 +86,10 @@ serve(async (req) => {
       throw new Error('No authorization header')
     }
 
-    // Get user ID from the JWT
     const { data: { user }, error: userError } = await supabase.auth.getUser(authHeader)
     if (userError) throw userError
 
-    // Insert processed data into the health_data table
+    // Store the processed data
     const { error: insertError } = await supabase
       .from('health_data')
       .insert({

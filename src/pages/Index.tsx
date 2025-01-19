@@ -1,68 +1,68 @@
 import { DashboardCard } from "@/components/DashboardCard";
 import { HealthMetric } from "@/components/HealthMetric";
 import { HealthGoal } from "@/components/HealthGoal";
-import { MealAnalysis } from "@/components/MealAnalysis";
-import { VoiceJournal } from "@/components/VoiceJournal";
-import { HealthChat } from "@/components/HealthChat";
+import { Link } from "react-router-dom";
+import { ArrowRight } from "lucide-react";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b">
-        <div className="container py-4">
-          <h1 className="text-2xl font-bold text-primary">HealthSync</h1>
-        </div>
-      </header>
-
-      <main className="container py-8">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <DashboardCard title="Today's Progress" className="lg:col-span-2">
-            <div className="space-y-6">
-              <HealthMetric
-                label="Steps"
-                value={6500}
-                target={10000}
-                unit="steps"
-              />
-              <HealthMetric
-                label="Water"
-                value={1.5}
-                target={2.5}
-                unit="L"
-              />
-              <HealthMetric
-                label="Sleep"
-                value={6.5}
-                target={8}
-                unit="hours"
-              />
-            </div>
-          </DashboardCard>
-
-          <DashboardCard title="Goals" className="md:col-span-2 lg:col-span-1">
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-gray-900">Dashboard Overview</h2>
+      
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <Link to="/progress" className="transition-transform hover:scale-105">
+          <DashboardCard title="Progress Overview" className="h-full">
             <div className="space-y-4">
-              <HealthGoal
-                title="Morning Walk"
-                description="30 minutes of walking"
-                completed
+              <HealthMetric
+                label="Daily Goals Progress"
+                value={2}
+                target={3}
+                unit="completed"
               />
-              <HealthGoal
-                title="Meditation"
-                description="15 minutes of mindfulness"
-              />
-              <HealthGoal
-                title="Healthy Breakfast"
-                description="Include proteins and fruits"
-                completed
-              />
+              <div className="flex items-center justify-between text-sm text-gray-500">
+                <span>View Details</span>
+                <ArrowRight className="h-4 w-4" />
+              </div>
             </div>
           </DashboardCard>
+        </Link>
 
-          <MealAnalysis />
-          <VoiceJournal />
-          <HealthChat />
-        </div>
-      </main>
+        <Link to="/meals" className="transition-transform hover:scale-105">
+          <DashboardCard title="Recent Meals" className="h-full">
+            <div className="space-y-4">
+              <p className="text-sm text-gray-500">Track and analyze your meals</p>
+              <div className="flex items-center justify-between text-sm text-gray-500">
+                <span>Start Analysis</span>
+                <ArrowRight className="h-4 w-4" />
+              </div>
+            </div>
+          </DashboardCard>
+        </Link>
+
+        <Link to="/journal" className="transition-transform hover:scale-105">
+          <DashboardCard title="Voice Journal" className="h-full">
+            <div className="space-y-4">
+              <p className="text-sm text-gray-500">Record your health journey</p>
+              <div className="flex items-center justify-between text-sm text-gray-500">
+                <span>Start Recording</span>
+                <ArrowRight className="h-4 w-4" />
+              </div>
+            </div>
+          </DashboardCard>
+        </Link>
+
+        <Link to="/chat" className="transition-transform hover:scale-105 md:col-span-2 lg:col-span-3">
+          <DashboardCard title="Health Assistant" className="h-full">
+            <div className="space-y-4">
+              <p className="text-sm text-gray-500">Get personalized health advice and support</p>
+              <div className="flex items-center justify-between text-sm text-gray-500">
+                <span>Start Chat</span>
+                <ArrowRight className="h-4 w-4" />
+              </div>
+            </div>
+          </DashboardCard>
+        </Link>
+      </div>
     </div>
   );
 };

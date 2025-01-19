@@ -3,7 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Camera } from "lucide-react";
 import { DashboardCard } from "./DashboardCard";
 
-export function MealAnalysis() {
+interface MealAnalysisProps {
+  onImageSelect?: (imageBase64: string) => void;
+}
+
+export function MealAnalysis({ onImageSelect }: MealAnalysisProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -11,7 +15,11 @@ export function MealAnalysis() {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setSelectedImage(reader.result as string);
+        const base64String = reader.result as string;
+        setSelectedImage(base64String);
+        if (onImageSelect) {
+          onImageSelect(base64String.split(',')[1]);
+        }
       };
       reader.readAsDataURL(file);
     }

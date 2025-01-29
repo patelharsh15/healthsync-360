@@ -22,11 +22,14 @@ interface Goal {
   created_at: string;
 }
 
+const ALLOWED_METRICS = ['steps', 'water', 'sleep'];
+
 const fetchUserGoals = async (userId: string) => {
   const { data, error } = await supabase
     .from('user_goals')
     .select('*')
     .eq('user_id', userId)
+    .in('goal_type', ALLOWED_METRICS)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
@@ -210,14 +213,16 @@ const Index = () => {
             {dateRanges.map((range) => (
               <TabsContent key={range.label} value={range.label.toLowerCase()}>
                 <div className="space-y-4">
-                  {filterGoalsByDate(range.date).map((goal) => (
-                    <HealthGoal
-                      key={goal.id}
-                      title={`Daily ${goal.goal_type.charAt(0).toUpperCase() + goal.goal_type.slice(1)}`}
-                      description={`${(goal.current_value || 0).toLocaleString()} / ${goal.target_value.toLocaleString()} ${goal.unit}`}
-                      completed={(goal.current_value || 0) >= goal.target_value}
-                    />
-                  ))}
+                  {filterGoalsByDate(range.date)
+                    .filter(goal => ALLOWED_METRICS.includes(goal.goal_type))
+                    .map((goal) => (
+                      <HealthGoal
+                        key={goal.id}
+                        title={`Daily ${goal.goal_type.charAt(0).toUpperCase() + goal.goal_type.slice(1)}`}
+                        description={`${(goal.current_value || 0).toLocaleString()} / ${goal.target_value.toLocaleString()} ${goal.unit}`}
+                        completed={(goal.current_value || 0) >= goal.target_value}
+                      />
+                    ))}
                   {filterGoalsByDate(range.date).length === 0 && (
                     <p className="text-sm text-gray-500 text-center py-4">No goals for this date</p>
                   )}
@@ -242,17 +247,19 @@ const Index = () => {
             {dateRanges.map((range) => (
               <TabsContent key={range.label} value={range.label.toLowerCase()}>
                 <div className="space-y-6">
-                  {filterGoalsByDate(range.date).map((goal) => (
-                    <HealthMetric
-                      key={goal.id}
-                      label={`${goal.goal_type.charAt(0).toUpperCase() + goal.goal_type.slice(1)} Today`}
-                      value={goal.current_value || 0}
-                      target={goal.target_value}
-                      unit={goal.unit}
-                      goalId={goal.id}
-                      onUpdate={refetchGoals}
-                    />
-                  ))}
+                  {filterGoalsByDate(range.date)
+                    .filter(goal => ALLOWED_METRICS.includes(goal.goal_type))
+                    .map((goal) => (
+                      <HealthMetric
+                        key={goal.id}
+                        label={`${goal.goal_type.charAt(0).toUpperCase() + goal.goal_type.slice(1)} Today`}
+                        value={goal.current_value || 0}
+                        target={goal.target_value}
+                        unit={goal.unit}
+                        goalId={goal.id}
+                        onUpdate={refetchGoals}
+                      />
+                    ))}
                   {filterGoalsByDate(range.date).length === 0 && (
                     <p className="text-sm text-gray-500 text-center py-4">No stats available for this date</p>
                   )}

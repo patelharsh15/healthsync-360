@@ -1,128 +1,96 @@
-import { Button } from "@/components/ui/button";
-import { DashboardCard } from "./DashboardCard";
-import { useToast } from "@/hooks/use-toast";
-import { Activity, Heart, Watch, Apple } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
-
-type Platform = 'fitbit' | 'strava' | 'google_fit' | 'apple_health';
-
-interface PlatformConfig {
-  name: string;
-  icon: React.ComponentType;
-}
-
-const platforms: Record<Platform, PlatformConfig> = {
-  fitbit: {
-    name: "Fitbit",
-    icon: Watch
-  },
-  strava: {
-    name: "Strava",
-    icon: Activity
-  },
-  google_fit: {
-    name: "Google Fit",
-    icon: Heart
-  },
-  apple_health: {
-    name: "Apple Health",
-    icon: Apple
-  }
-};
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 export function HealthDataIntegrations() {
-  const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const { toast } = useToast();
 
-  const handleConnect = async (platform: Platform) => {
-    if (platform === 'apple_health' && selectedFile) {
-      setIsUploading(true);
-      try {
-        const formData = new FormData();
-        formData.append('file', selectedFile);
-
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.access_token) {
-          throw new Error('No access token available');
-        }
-
-        const { data, error } = await supabase.functions.invoke('process-health-data', {
-          body: formData,
-        });
-
-        if (error) throw error;
-
-        toast({
-          title: "Success",
-          description: "Health data imported successfully!",
-        });
-
-        setSelectedFile(null);
-      } catch (error) {
-        console.error('Error uploading health data:', error);
-        toast({
-          title: "Error",
-          description: "Failed to import health data. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsUploading(false);
-      }
-    } else {
-      toast({
-        title: "Coming Soon",
-        description: `${platforms[platform].name} integration will be available soon!`,
-      });
-    }
-  };
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user.id) {
+        throw new Error("User not authenticated");
+      }
+
+      // First, upload the file to Supabase storage
+      const fileName = `health-data/${session.user.id}/${Date.now()}-${file.name}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('user-files')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get the public URL of the uploaded file
+      const { data: { publicUrl } } = supabase.storage
+        .from('user-files')
+        .getPublicUrl(fileName);
+
+      // Process the uploaded file using the Edge Function
+      const { data, error } = await supabase.functions.invoke('process-health-data', {
+        body: { fileUrl: publicUrl }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Health data processed successfully",
+        description: "Your health data has been uploaded and processed.",
+      });
+
+    } catch (error) {
+      console.error('Error processing health data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process health data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
     }
   };
 
   return (
-    <DashboardCard title="Health Data Integrations">
-      <div className="grid gap-4 md:grid-cols-2">
-        {Object.entries(platforms).map(([key, platform]) => {
-          const Icon = platform.icon;
-          const isPlatform = key as Platform;
-          const isAppleHealth = key === 'apple_health';
-          
-          return (
-            <div key={key} className="space-y-2">
-              <Button
-                variant="outline"
-                className="h-auto py-4 px-6 w-full flex items-center justify-start space-x-4"
-                onClick={() => handleConnect(isPlatform)}
-                disabled={isUploading || (isAppleHealth && !selectedFile)}
-              >
-                <Icon className="h-6 w-6" />
-                <div className="text-left flex-1">
-                  <div className="font-medium">{platform.name}</div>
-                  <div className="text-sm text-gray-500">
-                    {isAppleHealth ? 'Upload export file' : 'Coming Soon'}
-                  </div>
-                </div>
-              </Button>
-              {isAppleHealth && (
-                <div className="w-full">
-                  <input
-                    type="file"
-                    accept=".xml"
-                    onChange={handleFileChange}
-                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90"
-                  />
-                </div>
+    <div className="bg-white p-6 rounded-lg shadow-sm border space-y-4">
+      <h3 className="text-lg font-semibold text-gray-900">Health Data Integration</h3>
+      <p className="text-sm text-gray-500">
+        Upload your Apple Health export (export.xml) to sync your health data.
+      </p>
+      <div className="flex items-center gap-4">
+        <input
+          type="file"
+          accept=".xml"
+          onChange={handleFileUpload}
+          disabled={isUploading}
+          className="hidden"
+          id="health-data-upload"
+        />
+        <label htmlFor="health-data-upload">
+          <Button
+            variant="outline"
+            disabled={isUploading}
+            className="cursor-pointer"
+            asChild
+          >
+            <span>
+              {isUploading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                'Upload Health Data'
               )}
-            </div>
-          );
-        })}
+            </span>
+          </Button>
+        </label>
       </div>
-    </DashboardCard>
+    </div>
   );
 }

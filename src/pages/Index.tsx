@@ -15,14 +15,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Goal {
   id: string;
-  goal_type: string;
+  goal_type: "steps" | "water" | "sleep";
   target_value: number;
   current_value: number | null;
   unit: string;
   created_at: string;
 }
 
-const ALLOWED_METRICS = ['steps', 'water', 'sleep'];
+const ALLOWED_METRICS = ["steps", "water", "sleep"] as const;
 
 const fetchUserGoals = async (userId: string) => {
   const { data, error } = await supabase
@@ -77,12 +77,8 @@ const Index = () => {
   ];
 
   const filterGoalsByDate = (date: Date) => {
-    const start = startOfDay(date);
-    const end = endOfDay(date);
-    return goals.filter(goal => {
-      const goalDate = new Date(goal.created_at);
-      return goalDate >= start && goalDate <= end;
-    });
+    // Return all active goals regardless of date
+    return goals;
   };
 
   return (
@@ -213,7 +209,7 @@ const Index = () => {
             {dateRanges.map((range) => (
               <TabsContent key={range.label} value={range.label.toLowerCase()}>
                 <div className="space-y-4">
-                  {filterGoalsByDate(range.date)
+                  {goals
                     .filter(goal => ALLOWED_METRICS.includes(goal.goal_type))
                     .map((goal) => (
                       <HealthGoal
@@ -223,8 +219,8 @@ const Index = () => {
                         completed={(goal.current_value || 0) >= goal.target_value}
                       />
                     ))}
-                  {filterGoalsByDate(range.date).length === 0 && (
-                    <p className="text-sm text-gray-500 text-center py-4">No goals for this date</p>
+                  {goals.length === 0 && (
+                    <p className="text-sm text-gray-500 text-center py-4">No goals set yet</p>
                   )}
                 </div>
               </TabsContent>
@@ -247,7 +243,7 @@ const Index = () => {
             {dateRanges.map((range) => (
               <TabsContent key={range.label} value={range.label.toLowerCase()}>
                 <div className="space-y-6">
-                  {filterGoalsByDate(range.date)
+                  {goals
                     .filter(goal => ALLOWED_METRICS.includes(goal.goal_type))
                     .map((goal) => (
                       <HealthMetric
@@ -260,8 +256,8 @@ const Index = () => {
                         onUpdate={refetchGoals}
                       />
                     ))}
-                  {filterGoalsByDate(range.date).length === 0 && (
-                    <p className="text-sm text-gray-500 text-center py-4">No stats available for this date</p>
+                  {goals.length === 0 && (
+                    <p className="text-sm text-gray-500 text-center py-4">No goals set yet</p>
                   )}
                 </div>
               </TabsContent>

@@ -2,11 +2,13 @@ import { format, subDays } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "lucide-react";
 
-export const dateRanges = [
-  { label: 'Today', date: new Date() },
-  { label: 'Yesterday', date: subDays(new Date(), 1) },
-  { label: '2 Days Ago', date: subDays(new Date(), 2) },
-];
+// Create an array of the last 7 days
+export const dateRanges = Array.from({ length: 7 }, (_, i) => ({
+  label: i === 0 ? 'Today' : 
+         i === 1 ? 'Yesterday' : 
+         `${i} Days Ago`,
+  date: subDays(new Date(), i)
+}));
 
 interface DateTabsProps {
   children: (range: typeof dateRanges[0]) => React.ReactNode;
@@ -15,11 +17,12 @@ interface DateTabsProps {
 export function DateTabs({ children }: DateTabsProps) {
   return (
     <Tabs defaultValue="today" className="w-full">
-      <TabsList className="grid w-full grid-cols-3">
+      <TabsList className="grid w-full grid-cols-7">
         {dateRanges.map((range) => (
           <TabsTrigger
             key={range.label}
             value={range.label.toLowerCase()}
+            className="text-xs sm:text-sm"
           >
             {range.label}
           </TabsTrigger>

@@ -5,14 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-
-interface Goal {
-  id: string;
-  goal_type: string;
-  target_value: number;
-  current_value: number;
-  unit: string;
-}
+import { Goal } from "@/types/goals";
 
 const Progress = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -113,13 +106,16 @@ const Progress = () => {
               <HealthMetric
                 key={goal.id}
                 label={goal.goal_type.charAt(0).toUpperCase() + goal.goal_type.slice(1)}
-                value={goal.current_value}
+                value={goal.current_value || 0}
                 target={goal.target_value}
                 unit={goal.unit}
                 goalId={goal.id}
                 onUpdate={fetchGoals}
               />
             ))}
+            {goals.length === 0 && (
+              <p className="text-sm text-gray-500 text-center py-4">No goals set yet</p>
+            )}
             {goals.length > 0 && (
               <Button
                 onClick={analyzeProgress}

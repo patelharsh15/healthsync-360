@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { GoalSettingForm } from "@/components/GoalSettingForm";
 import { useQuery } from "@tanstack/react-query";
-import { format, subDays } from "date-fns";
+import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Goal {
@@ -20,55 +20,20 @@ interface Goal {
   current_value: number | null;
   unit: string;
   created_at: string;
-  progress_date: string;
 }
 
 const ALLOWED_METRICS = ["steps", "water", "sleep"] as const;
 
-const fetchUserGoals = async (userId: string, date: Date) => {
-  const formattedDate = format(date, 'yyyy-MM-dd');
-  
-  // First, get the user's target goals
-  const { data: targetGoals, error: targetError } = await supabase
+const fetchUserGoals = async (userId: string) => {
+  const { data, error } = await supabase
     .from('user_goals')
     .select('*')
     .eq('user_id', userId)
     .in('goal_type', ALLOWED_METRICS)
     .order('created_at', { ascending: false });
 
-  if (targetError) throw targetError;
-
-  // Then, get the progress for the specific date
-  const { data: dateProgress, error: progressError } = await supabase
-    .from('user_goals')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('progress_date', formattedDate)
-    .in('goal_type', ALLOWED_METRICS);
-
-  if (progressError) throw progressError;
-
-  // If no progress exists for this date, create new entries with current_value = 0
-  if (dateProgress.length === 0 && targetGoals.length > 0) {
-    const newProgressEntries = targetGoals.map(goal => ({
-      user_id: userId,
-      goal_type: goal.goal_type,
-      target_value: goal.target_value,
-      current_value: 0,
-      unit: goal.unit,
-      progress_date: formattedDate
-    }));
-
-    const { data: insertedProgress, error: insertError } = await supabase
-      .from('user_goals')
-      .insert(newProgressEntries)
-      .select();
-
-    if (insertError) throw insertError;
-    return insertedProgress;
-  }
-
-  return dateProgress;
+  if (error) throw error;
+  return data as Goal[];
 };
 
 const Index = () => {
@@ -86,15 +51,9 @@ const Index = () => {
     getUserId();
   }, []);
 
-  const dateRanges = [
-    { label: 'Today', date: new Date() },
-    { label: 'Yesterday', date: subDays(new Date(), 1) },
-    { label: '2 Days Ago', date: subDays(new Date(), 2) },
-  ];
-
-  const { data: goals = [], refetch: refetchGoals, isLoading } = useQuery({
-    queryKey: ['goals', userId, selectedDate],
-    queryFn: () => userId ? fetchUserGoals(userId, selectedDate) : Promise.resolve([]),
+  const { data: goals = [], refetch: refetchGoals } = useQuery({
+    queryKey: ['goals', userId],
+    queryFn: () => userId ? fetchUserGoals(userId) : Promise.resolve([]),
     enabled: !!userId,
   });
 
@@ -109,6 +68,17 @@ const Index = () => {
       water: goals.find(goal => goal.goal_type === 'water')?.target_value || 2.5,
       sleep: goals.find(goal => goal.goal_type === 'sleep')?.target_value || 8
     };
+  };
+
+  const dateRanges = [
+    { label: 'Today', date: new Date() },
+    { label: 'Yesterday', date: subDays(new Date(), 1) },
+    { label: '2 Days Ago', date: subDays(new Date(), 2) },
+  ];
+
+  const filterGoalsByDate = (date: Date) => {
+    // Return all active goals regardless of date
+    return goals;
   };
 
   return (
@@ -137,6 +107,92 @@ const Index = () => {
       
       <HealthDataIntegrations />
       
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <Link to="/progress" className="transition-transform hover:scale-105">
+          <DashboardCard title="Progress Overview" className="h-full">
+            <Tabs defaultValue="today" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                {dateRanges.map((range) => (
+                  <TabsTrigger
+                    key={range.label}
+                    value={range.label.toLowerCase()}
+                    onClick={() => setSelectedDate(range.date)}
+                  >
+                    {range.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {dateRanges.map((range) => (
+                <TabsContent key={range.label} value={range.label.toLowerCase()}>
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-3 text-primary">
+                      <Calendar className="h-5 w-5" />
+                      <span className="font-medium">
+                        {format(range.date, 'MMMM d, yyyy')}
+                      </span>
+                    </div>
+                    <HealthMetric
+                      label="Daily Goals Progress"
+                      value={filterGoalsByDate(range.date).filter(g => (g.current_value || 0) >= g.target_value).length}
+                      target={filterGoalsByDate(range.date).length || 1}
+                      unit="completed"
+                    />
+                  </div>
+                </TabsContent>
+              ))}
+            </Tabs>
+          </DashboardCard>
+        </Link>
+
+        <Link to="/meals" className="transition-transform hover:scale-105">
+          <DashboardCard title="Meal Analysis" className="h-full">
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3 text-primary">
+                <Utensils className="h-5 w-5" />
+                <span className="font-medium">Analyze Your Meals</span>
+              </div>
+              <p className="text-sm text-gray-500">Get AI-powered nutritional insights for your meals</p>
+              <div className="flex items-center justify-between text-sm text-gray-500">
+                <span>Start Analysis</span>
+                <ArrowRight className="h-4 w-4" />
+              </div>
+            </div>
+          </DashboardCard>
+        </Link>
+
+        <Link to="/journal" className="transition-transform hover:scale-105">
+          <DashboardCard title="Voice Journal" className="h-full">
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3 text-primary">
+                <Mic className="h-5 w-5" />
+                <span className="font-medium">Record Your Journey</span>
+              </div>
+              <p className="text-sm text-gray-500">Log your health journey with voice notes</p>
+              <div className="flex items-center justify-between text-sm text-gray-500">
+                <span>Start Recording</span>
+                <ArrowRight className="h-4 w-4" />
+              </div>
+            </div>
+          </DashboardCard>
+        </Link>
+
+        <Link to="/chat" className="transition-transform hover:scale-105 md:col-span-2 lg:col-span-3">
+          <DashboardCard title="Health Assistant" className="h-full">
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3 text-primary">
+                <MessageSquare className="h-5 w-5" />
+                <span className="font-medium">AI Health Assistant</span>
+              </div>
+              <p className="text-sm text-gray-500">Get personalized health advice and support</p>
+              <div className="flex items-center justify-between text-sm text-gray-500">
+                <span>Start Chat</span>
+                <ArrowRight className="h-4 w-4" />
+              </div>
+            </div>
+          </DashboardCard>
+        </Link>
+      </div>
+
       <div className="grid gap-6 md:grid-cols-2">
         <DashboardCard title="Recent Goals" className="h-full">
           <Tabs defaultValue="today" className="w-full">
@@ -145,7 +201,6 @@ const Index = () => {
                 <TabsTrigger
                   key={range.label}
                   value={range.label.toLowerCase()}
-                  onClick={() => setSelectedDate(range.date)}
                 >
                   {range.label}
                 </TabsTrigger>
@@ -154,20 +209,17 @@ const Index = () => {
             {dateRanges.map((range) => (
               <TabsContent key={range.label} value={range.label.toLowerCase()}>
                 <div className="space-y-4">
-                  {isLoading ? (
-                    <p className="text-sm text-gray-500 text-center py-4">Loading goals...</p>
-                  ) : goals.length > 0 ? (
-                    goals
-                      .filter(goal => ALLOWED_METRICS.includes(goal.goal_type))
-                      .map((goal) => (
-                        <HealthGoal
-                          key={goal.id}
-                          title={`Daily ${goal.goal_type.charAt(0).toUpperCase() + goal.goal_type.slice(1)}`}
-                          description={`${(goal.current_value || 0).toLocaleString()} / ${goal.target_value.toLocaleString()} ${goal.unit}`}
-                          completed={(goal.current_value || 0) >= goal.target_value}
-                        />
-                      ))
-                  ) : (
+                  {goals
+                    .filter(goal => ALLOWED_METRICS.includes(goal.goal_type))
+                    .map((goal) => (
+                      <HealthGoal
+                        key={goal.id}
+                        title={`Daily ${goal.goal_type.charAt(0).toUpperCase() + goal.goal_type.slice(1)}`}
+                        description={`${(goal.current_value || 0).toLocaleString()} / ${goal.target_value.toLocaleString()} ${goal.unit}`}
+                        completed={(goal.current_value || 0) >= goal.target_value}
+                      />
+                    ))}
+                  {goals.length === 0 && (
                     <p className="text-sm text-gray-500 text-center py-4">No goals set yet</p>
                   )}
                 </div>
@@ -183,7 +235,6 @@ const Index = () => {
                 <TabsTrigger
                   key={range.label}
                   value={range.label.toLowerCase()}
-                  onClick={() => setSelectedDate(range.date)}
                 >
                   {range.label}
                 </TabsTrigger>
@@ -192,23 +243,20 @@ const Index = () => {
             {dateRanges.map((range) => (
               <TabsContent key={range.label} value={range.label.toLowerCase()}>
                 <div className="space-y-6">
-                  {isLoading ? (
-                    <p className="text-sm text-gray-500 text-center py-4">Loading stats...</p>
-                  ) : goals.length > 0 ? (
-                    goals
-                      .filter(goal => ALLOWED_METRICS.includes(goal.goal_type))
-                      .map((goal) => (
-                        <HealthMetric
-                          key={goal.id}
-                          label={`${goal.goal_type.charAt(0).toUpperCase() + goal.goal_type.slice(1)} Today`}
-                          value={goal.current_value || 0}
-                          target={goal.target_value}
-                          unit={goal.unit}
-                          goalId={goal.id}
-                          onUpdate={() => refetchGoals()}
-                        />
-                      ))
-                  ) : (
+                  {goals
+                    .filter(goal => ALLOWED_METRICS.includes(goal.goal_type))
+                    .map((goal) => (
+                      <HealthMetric
+                        key={goal.id}
+                        label={`${goal.goal_type.charAt(0).toUpperCase() + goal.goal_type.slice(1)} Today`}
+                        value={goal.current_value || 0}
+                        target={goal.target_value}
+                        unit={goal.unit}
+                        goalId={goal.id}
+                        onUpdate={refetchGoals}
+                      />
+                    ))}
+                  {goals.length === 0 && (
                     <p className="text-sm text-gray-500 text-center py-4">No goals set yet</p>
                   )}
                 </div>

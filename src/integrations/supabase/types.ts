@@ -129,7 +129,6 @@ export type Database = {
           current_value: number | null
           goal_type: Database["public"]["Enums"]["goal_type"]
           id: string
-          progress_date: string | null
           target_value: number
           unit: string
           user_id: string
@@ -139,7 +138,6 @@ export type Database = {
           current_value?: number | null
           goal_type: Database["public"]["Enums"]["goal_type"]
           id?: string
-          progress_date?: string | null
           target_value: number
           unit: string
           user_id: string
@@ -149,7 +147,6 @@ export type Database = {
           current_value?: number | null
           goal_type?: Database["public"]["Enums"]["goal_type"]
           id?: string
-          progress_date?: string | null
           target_value?: number
           unit?: string
           user_id?: string

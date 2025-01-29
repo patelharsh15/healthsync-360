@@ -12,8 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardCard } from "@/components/DashboardCard";
+import { HealthMetric } from "@/components/HealthMetric";
 
-const ALLOWED_METRICS = ["steps", "water", "sleep"] as const;
+const ALLOWED_METRICS = ["steps", "water", "sleep", "weight", "exercise"] as const;
 
 const fetchUserGoals = async (userId: string) => {
   const { data, error } = await supabase
@@ -59,7 +60,9 @@ const Index = () => {
     return {
       steps: goals.find(goal => goal.goal_type === 'steps')?.target_value || 10000,
       water: goals.find(goal => goal.goal_type === 'water')?.target_value || 2.5,
-      sleep: goals.find(goal => goal.goal_type === 'sleep')?.target_value || 8
+      sleep: goals.find(goal => goal.goal_type === 'sleep')?.target_value || 8,
+      weight: goals.find(goal => goal.goal_type === 'weight')?.target_value || 70,
+      exercise: goals.find(goal => goal.goal_type === 'exercise')?.target_value || 30,
     };
   };
 

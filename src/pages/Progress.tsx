@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { Goal } from "@/types/goals";
+import { format } from "date-fns";
 
 const Progress = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -23,10 +24,13 @@ const Progress = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user.id) return;
 
+      const today = format(new Date(), 'yyyy-MM-dd');
+      
       const { data: userGoals, error } = await supabase
         .from('user_goals')
         .select('*')
-        .eq('user_id', session.user.id);
+        .eq('user_id', session.user.id)
+        .eq('progress_date', today);
 
       if (error) throw error;
       setGoals(userGoals || []);
@@ -45,9 +49,14 @@ const Progress = () => {
   const analyzeProgress = async () => {
     setIsAnalyzing(true);
     try {
+      const today = format(new Date(), 'yyyy-MM-dd');
       const metrics = goals.reduce((acc, goal) => ({
         ...acc,
-        [goal.goal_type]: { value: goal.current_value, target: goal.target_value }
+        [goal.goal_type]: {
+          value: goal.current_value || 0,
+          target: goal.target_value,
+          unit: goal.unit
+        }
       }), {});
 
       const { data, error } = await supabase.functions.invoke('groq-chat', {
@@ -55,13 +64,13 @@ const Progress = () => {
           messages: [
             {
               role: 'system',
-              content: 'You are a health analytics AI. Analyze the user\'s progress metrics and provide encouraging, actionable feedback in a concise way.'
+              content: 'You are a health analytics AI. Analyze the user\'s progress metrics for today and provide encouraging, actionable feedback in a concise way. Focus on specific achievements and areas for improvement.'
             },
             {
               role: 'user',
-              content: `Analyze my current progress metrics and provide specific recommendations:
+              content: `Analyze my progress metrics for ${today}:
                 ${Object.entries(metrics).map(([type, data]) => 
-                  `${type}: ${(data as any).value}/${(data as any).target}`
+                  `${type}: ${(data as any).value}/${(data as any).target} ${(data as any).unit}`
                 ).join('\n')}`
             }
           ]
@@ -114,7 +123,7 @@ const Progress = () => {
               />
             ))}
             {goals.length === 0 && (
-              <p className="text-sm text-gray-500 text-center py-4">No goals set yet</p>
+              <p className="text-sm text-gray-500 text-center py-4">No goals set for today</p>
             )}
             {goals.length > 0 && (
               <Button

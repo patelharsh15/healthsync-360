@@ -1,9 +1,7 @@
-import { useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useGoals } from "@/hooks/useGoals";
 import { useNavigate } from "react-router-dom";
 
 interface GoalSettingFormProps {
@@ -18,15 +16,19 @@ interface GoalSettingFormProps {
 }
 
 export function GoalSettingForm({ userId, initialGoals, onUpdate, isUpdate = false }: GoalSettingFormProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
   const navigate = useNavigate();
+  const { isSubmitting, updateGoals } = useGoals(userId, () => {
+    if (onUpdate) {
+      onUpdate();
+    } else {
+      navigate('/');
+    }
+  });
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsSubmitting(true);
-
     const formData = new FormData(e.currentTarget);
+    
     const goals = [
       {
         goal_type: 'steps' as const,
@@ -45,50 +47,7 @@ export function GoalSettingForm({ userId, initialGoals, onUpdate, isUpdate = fal
       }
     ];
 
-    try {
-      if (isUpdate) {
-        // Update existing goals
-        for (const goal of goals) {
-          const { error } = await supabase
-            .from('user_goals')
-            .update({ target_value: goal.target_value })
-            .eq('user_id', userId)
-            .eq('goal_type', goal.goal_type);
-
-          if (error) throw error;
-        }
-      } else {
-        // Insert new goals
-        const { error } = await supabase.from('user_goals').insert(
-          goals.map(goal => ({
-            user_id: userId,
-            ...goal
-          }))
-        );
-
-        if (error) throw error;
-      }
-
-      toast({
-        title: `Goals ${isUpdate ? 'updated' : 'set'} successfully!`,
-        description: `Your health goals have been ${isUpdate ? 'updated' : 'saved'}.`,
-      });
-
-      if (onUpdate) {
-        onUpdate();
-      } else {
-        navigate('/');
-      }
-    } catch (error) {
-      console.error('Error setting goals:', error);
-      toast({
-        title: "Error",
-        description: `Failed to ${isUpdate ? 'update' : 'set'} goals. Please try again.`,
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    await updateGoals(goals, isUpdate);
   };
 
   return (

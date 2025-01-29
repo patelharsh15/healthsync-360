@@ -7,3 +7,16 @@ export interface Goal {
   created_at: string;
   progress_date?: string;
 }
+
+export interface GoalProgress {
+  id: string;
+  goal_id: string;
+  value: number;
+  date: string;
+}
+
+export interface GoalSettings {
+  steps?: number;
+  water?: number;
+  sleep?: number;
+}

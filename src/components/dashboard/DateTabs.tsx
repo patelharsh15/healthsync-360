@@ -6,7 +6,7 @@ import { Calendar } from "lucide-react";
 export const dateRanges = Array.from({ length: 7 }, (_, i) => ({
   label: i === 0 ? 'Today' : 
          i === 1 ? 'Yesterday' : 
-         `${i} Days Ago`,
+         format(subDays(new Date(), i), 'EEE, MMM d'),
   date: subDays(new Date(), i)
 }));
 
@@ -17,12 +17,16 @@ interface DateTabsProps {
 export function DateTabs({ children }: DateTabsProps) {
   return (
     <Tabs defaultValue="today" className="w-full">
-      <TabsList className="grid w-full grid-cols-7">
+      <div className="flex items-center gap-2 mb-4">
+        <Calendar className="h-5 w-5 text-primary" />
+        <span className="font-medium text-primary">Select Date</span>
+      </div>
+      <TabsList className="grid w-full grid-cols-4 md:grid-cols-7 gap-1">
         {dateRanges.map((range) => (
           <TabsTrigger
             key={range.label}
             value={range.label.toLowerCase()}
-            className="text-xs sm:text-sm"
+            className="px-2 py-1.5 text-xs md:text-sm whitespace-nowrap overflow-hidden text-ellipsis"
           >
             {range.label}
           </TabsTrigger>

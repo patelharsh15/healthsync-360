@@ -3,13 +3,15 @@ import { HealthMetric } from "@/components/HealthMetric";
 import { HealthGoal } from "@/components/HealthGoal";
 import { HealthDataIntegrations } from "@/components/HealthDataIntegrations";
 import { Link } from "react-router-dom";
-import { ArrowRight, Activity, Utensils, Mic, MessageSquare, Edit2 } from "lucide-react";
+import { ArrowRight, Activity, Utensils, Mic, MessageSquare, Edit2, Calendar } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { GoalSettingForm } from "@/components/GoalSettingForm";
 import { useQuery } from "@tanstack/react-query";
+import { format, subDays, startOfDay, endOfDay } from "date-fns";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Goal {
   id: string;
@@ -17,13 +19,15 @@ interface Goal {
   target_value: number;
   current_value: number | null;
   unit: string;
+  created_at: string;
 }
 
 const fetchUserGoals = async (userId: string) => {
   const { data, error } = await supabase
     .from('user_goals')
     .select('*')
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
 
   if (error) throw error;
   return data as Goal[];
@@ -32,6 +36,7 @@ const fetchUserGoals = async (userId: string) => {
 const Index = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   useEffect(() => {
     const getUserId = async () => {
@@ -60,6 +65,21 @@ const Index = () => {
       water: goals.find(goal => goal.goal_type === 'water')?.target_value || 2.5,
       sleep: goals.find(goal => goal.goal_type === 'sleep')?.target_value || 8
     };
+  };
+
+  const dateRanges = [
+    { label: 'Today', date: new Date() },
+    { label: 'Yesterday', date: subDays(new Date(), 1) },
+    { label: '2 Days Ago', date: subDays(new Date(), 2) },
+  ];
+
+  const filterGoalsByDate = (date: Date) => {
+    const start = startOfDay(date);
+    const end = endOfDay(date);
+    return goals.filter(goal => {
+      const goalDate = new Date(goal.created_at);
+      return goalDate >= start && goalDate <= end;
+    });
   };
 
   return (
@@ -91,22 +111,37 @@ const Index = () => {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Link to="/progress" className="transition-transform hover:scale-105">
           <DashboardCard title="Progress Overview" className="h-full">
-            <div className="space-y-4">
-              <div className="flex items-center space-x-3 text-primary">
-                <Activity className="h-5 w-5" />
-                <span className="font-medium">Track Your Progress</span>
-              </div>
-              <HealthMetric
-                label="Daily Goals Progress"
-                value={goals.filter(g => (g.current_value || 0) >= g.target_value).length}
-                target={goals.length}
-                unit="completed"
-              />
-              <div className="flex items-center justify-between text-sm text-gray-500">
-                <span>View Details</span>
-                <ArrowRight className="h-4 w-4" />
-              </div>
-            </div>
+            <Tabs defaultValue="today" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                {dateRanges.map((range) => (
+                  <TabsTrigger
+                    key={range.label}
+                    value={range.label.toLowerCase()}
+                    onClick={() => setSelectedDate(range.date)}
+                  >
+                    {range.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {dateRanges.map((range) => (
+                <TabsContent key={range.label} value={range.label.toLowerCase()}>
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-3 text-primary">
+                      <Calendar className="h-5 w-5" />
+                      <span className="font-medium">
+                        {format(range.date, 'MMMM d, yyyy')}
+                      </span>
+                    </div>
+                    <HealthMetric
+                      label="Daily Goals Progress"
+                      value={filterGoalsByDate(range.date).filter(g => (g.current_value || 0) >= g.target_value).length}
+                      target={filterGoalsByDate(range.date).length || 1}
+                      unit="completed"
+                    />
+                  </div>
+                </TabsContent>
+              ))}
+            </Tabs>
           </DashboardCard>
         </Link>
 
@@ -161,32 +196,70 @@ const Index = () => {
 
       <div className="grid gap-6 md:grid-cols-2">
         <DashboardCard title="Recent Goals" className="h-full">
-          <div className="space-y-4">
-            {goals.map((goal) => (
-              <HealthGoal
-                key={goal.id}
-                title={`Daily ${goal.goal_type.charAt(0).toUpperCase() + goal.goal_type.slice(1)}`}
-                description={`${(goal.current_value || 0).toLocaleString()} / ${goal.target_value.toLocaleString()} ${goal.unit}`}
-                completed={(goal.current_value || 0) >= goal.target_value}
-              />
+          <Tabs defaultValue="today" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              {dateRanges.map((range) => (
+                <TabsTrigger
+                  key={range.label}
+                  value={range.label.toLowerCase()}
+                >
+                  {range.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {dateRanges.map((range) => (
+              <TabsContent key={range.label} value={range.label.toLowerCase()}>
+                <div className="space-y-4">
+                  {filterGoalsByDate(range.date).map((goal) => (
+                    <HealthGoal
+                      key={goal.id}
+                      title={`Daily ${goal.goal_type.charAt(0).toUpperCase() + goal.goal_type.slice(1)}`}
+                      description={`${(goal.current_value || 0).toLocaleString()} / ${goal.target_value.toLocaleString()} ${goal.unit}`}
+                      completed={(goal.current_value || 0) >= goal.target_value}
+                    />
+                  ))}
+                  {filterGoalsByDate(range.date).length === 0 && (
+                    <p className="text-sm text-gray-500 text-center py-4">No goals for this date</p>
+                  )}
+                </div>
+              </TabsContent>
             ))}
-          </div>
+          </Tabs>
         </DashboardCard>
 
         <DashboardCard title="Quick Stats" className="h-full">
-          <div className="space-y-6">
-            {goals.map((goal) => (
-              <HealthMetric
-                key={goal.id}
-                label={`${goal.goal_type.charAt(0).toUpperCase() + goal.goal_type.slice(1)} Today`}
-                value={goal.current_value || 0}
-                target={goal.target_value}
-                unit={goal.unit}
-                goalId={goal.id}
-                onUpdate={refetchGoals}
-              />
+          <Tabs defaultValue="today" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              {dateRanges.map((range) => (
+                <TabsTrigger
+                  key={range.label}
+                  value={range.label.toLowerCase()}
+                >
+                  {range.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {dateRanges.map((range) => (
+              <TabsContent key={range.label} value={range.label.toLowerCase()}>
+                <div className="space-y-6">
+                  {filterGoalsByDate(range.date).map((goal) => (
+                    <HealthMetric
+                      key={goal.id}
+                      label={`${goal.goal_type.charAt(0).toUpperCase() + goal.goal_type.slice(1)} Today`}
+                      value={goal.current_value || 0}
+                      target={goal.target_value}
+                      unit={goal.unit}
+                      goalId={goal.id}
+                      onUpdate={refetchGoals}
+                    />
+                  ))}
+                  {filterGoalsByDate(range.date).length === 0 && (
+                    <p className="text-sm text-gray-500 text-center py-4">No stats available for this date</p>
+                  )}
+                </div>
+              </TabsContent>
             ))}
-          </div>
+          </Tabs>
         </DashboardCard>
       </div>
     </div>

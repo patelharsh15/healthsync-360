@@ -13,6 +13,7 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardCard } from "@/components/DashboardCard";
 import { HealthMetric } from "@/components/HealthMetric";
+import { subDays, format } from "date-fns";
 
 const Index = () => {
   const [userId, setUserId] = useState<string | null>(null);
@@ -21,7 +22,7 @@ const Index = () => {
   const [aiInsights, setAiInsights] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Get the current user's session
+  // Get the current user's session and ensure default goals exist
   useEffect(() => {
     const getUserId = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -44,17 +45,22 @@ const Index = () => {
     getUserId();
   }, [toast]);
 
-  // Fetch goals with the updated query
+  // Fetch goals for the past 7 days
   const { data: goals = [], refetch: refetchGoals, isLoading } = useQuery({
     queryKey: ['goals', userId],
     queryFn: async () => {
       if (!userId) return [];
       
+      const startDate = format(subDays(new Date(), 6), 'yyyy-MM-dd');
+      const endDate = format(new Date(), 'yyyy-MM-dd');
+      
       const { data, error } = await supabase
         .from('user_goals')
         .select('*')
         .eq('user_id', userId)
-        .eq('progress_date', new Date().toISOString().split('T')[0]);
+        .gte('progress_date', startDate)
+        .lte('progress_date', endDate)
+        .order('progress_date', { ascending: false });
 
       if (error) {
         toast({
@@ -147,17 +153,19 @@ const Index = () => {
         <Link to="/progress" className="transition-transform hover:scale-105">
           <DashboardCard title="Progress Analysis" className="h-full">
             <div className="space-y-6">
-              {goals.map((goal) => (
-                <HealthMetric
-                  key={goal.id}
-                  label={goal.goal_type.charAt(0).toUpperCase() + goal.goal_type.slice(1)}
-                  value={goal.current_value || 0}
-                  target={goal.target_value}
-                  unit={goal.unit}
-                  goalId={goal.id}
-                  onUpdate={refetchGoals}
-                />
-              ))}
+              {goals
+                .filter(goal => goal.progress_date === format(new Date(), 'yyyy-MM-dd'))
+                .map((goal) => (
+                  <HealthMetric
+                    key={goal.id}
+                    label={goal.goal_type.charAt(0).toUpperCase() + goal.goal_type.slice(1)}
+                    value={goal.current_value || 0}
+                    target={goal.target_value}
+                    unit={goal.unit}
+                    goalId={goal.id}
+                    onUpdate={refetchGoals}
+                  />
+                ))}
               {goals.length === 0 && (
                 <p className="text-sm text-gray-500 text-center py-4">Loading goals...</p>
               )}

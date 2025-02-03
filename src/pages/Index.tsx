@@ -14,20 +14,6 @@ import { useToast } from "@/hooks/use-toast";
 import { DashboardCard } from "@/components/DashboardCard";
 import { HealthMetric } from "@/components/HealthMetric";
 
-const ALLOWED_METRICS = ["steps", "water", "sleep", "weight", "exercise"] as const;
-
-const fetchUserGoals = async (userId: string) => {
-  const { data, error } = await supabase
-    .from('user_goals')
-    .select('*')
-    .eq('user_id', userId)
-    .in('goal_type', ALLOWED_METRICS)
-    .order('created_at', { ascending: false });
-
-  if (error) throw error;
-  return data as Goal[];
-};
-
 const Index = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -35,34 +21,60 @@ const Index = () => {
   const [aiInsights, setAiInsights] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // Get the current user's session
   useEffect(() => {
     const getUserId = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user.id) {
         setUserId(session.user.id);
+        // Call the function to ensure default goals exist
+        const { error } = await supabase.rpc('insert_default_goals', {
+          p_user_id: session.user.id
+        });
+        if (error) {
+          console.error('Error creating default goals:', error);
+          toast({
+            title: "Error",
+            description: "Failed to set up default goals. Please try again.",
+            variant: "destructive",
+          });
+        }
       }
     };
     getUserId();
-  }, []);
+  }, [toast]);
 
-  const { data: goals = [], refetch: refetchGoals } = useQuery({
+  // Fetch goals with the updated query
+  const { data: goals = [], refetch: refetchGoals, isLoading } = useQuery({
     queryKey: ['goals', userId],
-    queryFn: () => userId ? fetchUserGoals(userId) : Promise.resolve([]),
+    queryFn: async () => {
+      if (!userId) return [];
+      
+      const { data, error } = await supabase
+        .from('user_goals')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('progress_date', new Date().toISOString().split('T')[0]);
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to fetch goals. Please try again.",
+          variant: "destructive",
+        });
+        throw error;
+      }
+
+      return data as Goal[];
+    },
     enabled: !!userId,
   });
-
-  const handleGoalsUpdate = () => {
-    refetchGoals();
-    setDialogOpen(false);
-  };
 
   const getCurrentGoals = () => {
     return {
       steps: goals.find(goal => goal.goal_type === 'steps')?.target_value || 10000,
       water: goals.find(goal => goal.goal_type === 'water')?.target_value || 2.5,
       sleep: goals.find(goal => goal.goal_type === 'sleep')?.target_value || 8,
-      weight: goals.find(goal => goal.goal_type === 'weight')?.target_value || 70,
-      exercise: goals.find(goal => goal.goal_type === 'exercise')?.target_value || 30,
     };
   };
 
@@ -111,6 +123,14 @@ const Index = () => {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <DashboardHeader
@@ -118,7 +138,7 @@ const Index = () => {
         dialogOpen={dialogOpen}
         setDialogOpen={setDialogOpen}
         getCurrentGoals={getCurrentGoals}
-        onGoalsUpdate={handleGoalsUpdate}
+        onGoalsUpdate={refetchGoals}
       />
       
       <HealthDataIntegrations />
@@ -139,7 +159,7 @@ const Index = () => {
                 />
               ))}
               {goals.length === 0 && (
-                <p className="text-sm text-gray-500 text-center py-4">No goals set yet</p>
+                <p className="text-sm text-gray-500 text-center py-4">Loading goals...</p>
               )}
               {goals.length > 0 && (
                 <Button

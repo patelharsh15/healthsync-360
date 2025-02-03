@@ -188,7 +188,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      insert_default_goals: {
+        Args: {
+          p_user_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       goal_type: "steps" | "water" | "sleep" | "weight" | "exercise"

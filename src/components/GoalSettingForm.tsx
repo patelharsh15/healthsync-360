@@ -62,7 +62,7 @@ export function GoalSettingForm({ userId, initialGoals, onUpdate, isUpdate = fal
             id="steps"
             name="steps"
             type="number"
-            defaultValue={initialGoals?.steps || "10000"}
+            defaultValue={initialGoals?.steps || 10000}
             required
           />
         </div>
@@ -74,7 +74,7 @@ export function GoalSettingForm({ userId, initialGoals, onUpdate, isUpdate = fal
             name="water"
             type="number"
             step="0.1"
-            defaultValue={initialGoals?.water || "2.5"}
+            defaultValue={initialGoals?.water || 2.5}
             required
           />
         </div>
@@ -86,7 +86,7 @@ export function GoalSettingForm({ userId, initialGoals, onUpdate, isUpdate = fal
             name="sleep"
             type="number"
             step="0.5"
-            defaultValue={initialGoals?.sleep || "8"}
+            defaultValue={initialGoals?.sleep || 8}
             required
           />
         </div>
